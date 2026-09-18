@@ -1,0 +1,10 @@
+{
+  "domain": "spacepak_ilahp",
+  "name": "SpacePak Solstice ILAHP",
+  "version": "0.1.0",
+  "config_flow": true,
+  "documentation": "",
+  "requirements": ["modbus-connection[pymodbus]>=4.12.1"],
+  "codeowners": [],
+  "iot_class": "local_polling"
+}

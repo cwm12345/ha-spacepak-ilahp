@@ -1,0 +1,66 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "SpacePak ILAHP Heat Pump",
+        "description": "Enter the Modbus TCP gateway host and port for this unit (if you have two units sharing one gateway, use a different port per unit) and its Modbus unit/slave ID.",
+        "data": {
+          "host": "Gateway host",
+          "port": "Port",
+          "unit_id": "Modbus unit ID"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach the heat pump or read its registers. Check host/port/unit ID and that this machine has network access to the gateway."
+    },
+    "abort": {
+      "already_configured": "This heat pump is already configured."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "outlet_temp": { "name": "Outlet Temperature" },
+      "ambient_temp": { "name": "Ambient Temperature" },
+      "ac_current": { "name": "AC Current" },
+      "mode_raw": { "name": "Mode (raw, unconfirmed mapping)" },
+      "unit_mode": { "name": "Unit Mode" },
+      "inlet_temp": { "name": "Inlet Temperature" },
+      "dhw_tank_temp": { "name": "DHW Tank Temperature" },
+      "coil_temp": { "name": "Coil Temperature" },
+      "suction_temp": { "name": "Suction Temperature" },
+      "discharge_temp": { "name": "Discharge Temperature" },
+      "room_temp": { "name": "Room Temperature" },
+      "compressor_current": { "name": "Compressor Current" },
+      "compressor_runtime": { "name": "Compressor Runtime" },
+      "dc_line_voltage": { "name": "DC Line Voltage" },
+      "ac_input_voltage": { "name": "AC Input Voltage" },
+      "compressor_freq_setting": { "name": "Compressor Frequency Setting" },
+      "compressor_freq_running": { "name": "Compressor Frequency Running" },
+      "water_flow": { "name": "Water Flow (unit unconfirmed)" },
+      "output_relays_raw": { "name": "Output Relays (raw bitmask)" },
+      "failure_1_raw": { "name": "Failure 1 (raw bitmask)" },
+      "failure_2_raw": { "name": "Failure 2 (raw bitmask)" },
+      "failure_3_raw": { "name": "Failure 3 (raw bitmask)" },
+      "failure_4_raw": { "name": "Failure 4 (raw bitmask)" },
+      "failure_5_raw": { "name": "Failure 5 (raw bitmask)" },
+      "failure_6_raw": { "name": "Failure 6 (raw bitmask)" },
+      "failure_7_raw": { "name": "Failure 7 (raw bitmask)" },
+      "failure_8_raw": { "name": "Failure 8 (raw bitmask)" },
+      "failure_9_raw": { "name": "Failure 9 (raw bitmask)" }
+    },
+    "binary_sensor": {
+      "unit_running": { "name": "Running" },
+      "compressor_on": { "name": "Compressor On" },
+      "alarm_output": { "name": "Alarm Output" },
+      "any_fault": { "name": "Any Fault" }
+    },
+    "switch": {
+      "power": { "name": "Power" }
+    },
+    "number": {
+      "heating_target_temp": { "name": "Heating Target Temperature" },
+      "cooling_target_temp": { "name": "Cooling Target Temperature" }
+    }
+  }
+}
