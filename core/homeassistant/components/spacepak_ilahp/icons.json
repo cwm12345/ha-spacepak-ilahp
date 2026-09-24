@@ -1,0 +1,19 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "compressor_on": { "default": "mdi:heat-pump" }
+    },
+    "sensor": {
+      "compressor_freq_running": { "default": "mdi:sine-wave" },
+      "compressor_freq_setting": { "default": "mdi:sine-wave" },
+      "failure_raw": { "default": "mdi:alert-circle-outline" },
+      "operating_mode": { "default": "mdi:heat-pump-outline" },
+      "output_relays_raw": { "default": "mdi:electric-switch" },
+      "unit_mode": { "default": "mdi:heat-pump" },
+      "water_flow": { "default": "mdi:water-pump" }
+    },
+    "switch": {
+      "power": { "default": "mdi:power" }
+    }
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+    },
+    "error": {
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "host": "[%key:common::config_flow::data::host%]",
+          "port": "[%key:common::config_flow::data::port%]",
+          "unit_id": "Modbus unit ID"
+        },
+        "data_description": {
+          "host": "The Modbus TCP gateway the heat pump's RS-485 port is wired to.",
+          "port": "The gateway's TCP port for this heat pump.",
+          "unit_id": "The heat pump's Modbus address (installer parameter H10). Defaults to 1."
+        },
+        "description": "Connect to a SpacePak Solstice Inverter Extreme (ILAHP) heat pump through a Modbus TCP gateway."
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "alarm_output": { "name": "Alarm output" },
+      "any_fault": { "name": "Fault" },
+      "compressor_on": { "name": "Compressor" },
+      "unit_running": { "name": "Running" }
+    },
+    "number": {
+      "cooling_target_temp": { "name": "Cooling target temperature" },
+      "heating_target_temp": { "name": "Heating target temperature" }
+    },
+    "sensor": {
+      "ac_current": { "name": "AC input current" },
+      "ac_input_voltage": { "name": "AC input voltage" },
+      "ambient_temp": { "name": "Outdoor temperature" },
+      "coil_temp": { "name": "Coil temperature" },
+      "compressor_current": { "name": "Compressor current" },
+      "compressor_freq_running": { "name": "Compressor frequency" },
+      "compressor_freq_setting": { "name": "Compressor target frequency" },
+      "compressor_runtime": { "name": "Compressor running time" },
+      "dc_line_voltage": { "name": "DC bus voltage" },
+      "dhw_tank_temp": { "name": "Hot water tank temperature" },
+      "discharge_temp": { "name": "Discharge temperature" },
+      "failure_raw": { "name": "Failure register {register}" },
+      "inlet_temp": { "name": "Inlet water temperature" },
+      "operating_mode": {
+        "name": "Operating mode",
+        "state": {
+          "cooling": "Cooling",
+          "heating": "Heating",
+          "hot_water": "Hot water",
+          "hot_water_and_cooling": "Hot water and cooling",
+          "hot_water_and_heating": "Hot water and heating"
+        }
+      },
+      "outlet_temp": { "name": "Outlet water temperature" },
+      "output_relays_raw": { "name": "Load outputs" },
+      "room_temp": { "name": "Room temperature" },
+      "suction_temp": { "name": "Suction temperature" },
+      "unit_mode": {
+        "name": "Current mode",
+        "state": {
+          "cooling": "Cooling",
+          "defrost": "Defrost",
+          "heating": "Heating",
+          "hot_water": "Hot water",
+          "sterilize": "Sterilize"
+        }
+      },
+      "water_flow": { "name": "Water flow" }
+    },
+    "switch": {
+      "power": { "name": "Power" }
+    }
+  },
+  "exceptions": {
+    "modbus_error": {
+      "message": "Could not reach the heat pump: {error}"
+    },
+    "no_component_answered": {
+      "message": "The heat pump did not answer any register block"
+    },
+    "write_failed": {
+      "message": "Could not write to the heat pump: {error}"
+    }
+  }
+}

@@ -1,56 +1,87 @@
-# Written by Claude, guided by Chris.
-"""The SpacePak ILAHP integration.
+"""The SpacePak ILAHP heat pump integration."""
 
-One config entry per physical heat pump. Creates one HA device per entry,
-owned by that entry (the sanctioned pattern -- entities declare their own
-device_info from within this integration, nothing is reassigned from
-outside). See Home Automation/roadmap.md goal 9 for the broader buffer-
-tank-control project this is one building block of.
-"""
+# Written by Claude, guided by Chris.
+
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry
+from datetime import timedelta
+import logging
+
+from modbus_connection import ModbusTcpParams
+
+from homeassistant.components.modbus import async_get_unit
 from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
 
-from .const import CONF_UNIT_ID, DOMAIN, MANUFACTURER, MODEL
-from .coordinator import IlahpCoordinator
+from .const import CONF_UNIT_ID, SCAN_INTERVAL, SETTINGS_SCAN_INTERVAL
+from .coordinator import SpacePakConfigEntry, SpacePakCoordinator, SpacePakRuntimeData
+from .spacepak_modbus import IlahpHeatPump
+
+_LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [
-    Platform.SENSOR,
     Platform.BINARY_SENSOR,
-    Platform.SWITCH,
     Platform.NUMBER,
+    Platform.SENSOR,
+    Platform.SWITCH,
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    coordinator = IlahpCoordinator(
+def unique_id_for(host: str, port: int, unit_id: int) -> str:
+    """Return the config entry unique ID for one unit behind one gateway port."""
+    return f"{host}:{port}:{unit_id}"
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: SpacePakConfigEntry) -> bool:
+    """Set up a SpacePak ILAHP heat pump from a config entry."""
+    unit = async_get_unit(
         hass,
-        entry.data[CONF_HOST],
-        entry.data[CONF_PORT],
+        entry,
+        ModbusTcpParams(host=entry.data[CONF_HOST], port=entry.data[CONF_PORT]),
         entry.data[CONF_UNIT_ID],
     )
-    await coordinator.async_config_entry_first_refresh()
+    device = IlahpHeatPump(unit)
 
-    device_registry = dr.async_get(hass)
-    device_registry.async_get_or_create(
-        config_entry_id=entry.entry_id,
-        identifiers={(DOMAIN, entry.entry_id)},
-        name=entry.title,
-        manufacturer=MANUFACTURER,
-        model=MODEL,
+    readings = SpacePakCoordinator(
+        hass,
+        entry,
+        device,
+        device.async_update_readings,
+        timedelta(seconds=SCAN_INTERVAL),
     )
+    settings = SpacePakCoordinator(
+        hass,
+        entry,
+        device,
+        device.async_update_settings,
+        timedelta(seconds=SETTINGS_SCAN_INTERVAL),
+    )
+    await readings.async_config_entry_first_refresh()
+    await settings.async_config_entry_first_refresh()
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    entry.runtime_data = SpacePakRuntimeData(readings, settings)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if unload_ok:
-        coordinator: IlahpCoordinator = hass.data[DOMAIN].pop(entry.entry_id)
-        await coordinator.async_close()
-    return unload_ok
+async def async_unload_entry(hass: HomeAssistant, entry: SpacePakConfigEntry) -> bool:
+    """Unload a config entry."""
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: SpacePakConfigEntry) -> bool:
+    """Migrate an old config entry."""
+    if entry.version > 1:
+        return False
+    if entry.minor_version < 2:
+        # 1.1 keyed the entry on host:port alone, so two units sharing one
+        # gateway port under different unit IDs collided.
+        hass.config_entries.async_update_entry(
+            entry,
+            unique_id=unique_id_for(
+                entry.data[CONF_HOST], entry.data[CONF_PORT], entry.data[CONF_UNIT_ID]
+            ),
+            minor_version=2,
+        )
+        _LOGGER.debug("Migrated %s to version 1.2", entry.title)
+    return True

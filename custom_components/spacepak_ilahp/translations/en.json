@@ -1,66 +1,141 @@
 {
   "config": {
-    "step": {
-      "user": {
-        "title": "SpacePak ILAHP Heat Pump",
-        "description": "Enter the Modbus TCP gateway host and port for this unit (if you have two units sharing one gateway, use a different port per unit) and its Modbus unit/slave ID.",
-        "data": {
-          "host": "Gateway host",
-          "port": "Port",
-          "unit_id": "Modbus unit ID"
-        }
-      }
+    "abort": {
+      "already_configured": "Device is already configured"
     },
     "error": {
-      "cannot_connect": "Could not reach the heat pump or read its registers. Check host/port/unit ID and that this machine has network access to the gateway."
+      "cannot_connect": "Failed to connect"
     },
-    "abort": {
-      "already_configured": "This heat pump is already configured."
+    "step": {
+      "user": {
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "unit_id": "Modbus unit ID"
+        },
+        "data_description": {
+          "host": "The Modbus TCP gateway the heat pump's RS-485 port is wired to.",
+          "port": "The gateway's TCP port for this heat pump.",
+          "unit_id": "The heat pump's Modbus address (installer parameter H10). Defaults to 1."
+        },
+        "description": "Connect to a SpacePak Solstice Inverter Extreme (ILAHP) heat pump through a Modbus TCP gateway."
+      }
     }
   },
   "entity": {
-    "sensor": {
-      "outlet_temp": { "name": "Outlet Temperature" },
-      "ambient_temp": { "name": "Ambient Temperature" },
-      "ac_current": { "name": "AC Current" },
-      "mode_raw": { "name": "Mode (raw, unconfirmed mapping)" },
-      "unit_mode": { "name": "Unit Mode" },
-      "inlet_temp": { "name": "Inlet Temperature" },
-      "dhw_tank_temp": { "name": "DHW Tank Temperature" },
-      "coil_temp": { "name": "Coil Temperature" },
-      "suction_temp": { "name": "Suction Temperature" },
-      "discharge_temp": { "name": "Discharge Temperature" },
-      "room_temp": { "name": "Room Temperature" },
-      "compressor_current": { "name": "Compressor Current" },
-      "compressor_runtime": { "name": "Compressor Runtime" },
-      "dc_line_voltage": { "name": "DC Line Voltage" },
-      "ac_input_voltage": { "name": "AC Input Voltage" },
-      "compressor_freq_setting": { "name": "Compressor Frequency Setting" },
-      "compressor_freq_running": { "name": "Compressor Frequency Running" },
-      "water_flow": { "name": "Water Flow (unit unconfirmed)" },
-      "output_relays_raw": { "name": "Output Relays (raw bitmask)" },
-      "failure_1_raw": { "name": "Failure 1 (raw bitmask)" },
-      "failure_2_raw": { "name": "Failure 2 (raw bitmask)" },
-      "failure_3_raw": { "name": "Failure 3 (raw bitmask)" },
-      "failure_4_raw": { "name": "Failure 4 (raw bitmask)" },
-      "failure_5_raw": { "name": "Failure 5 (raw bitmask)" },
-      "failure_6_raw": { "name": "Failure 6 (raw bitmask)" },
-      "failure_7_raw": { "name": "Failure 7 (raw bitmask)" },
-      "failure_8_raw": { "name": "Failure 8 (raw bitmask)" },
-      "failure_9_raw": { "name": "Failure 9 (raw bitmask)" }
-    },
     "binary_sensor": {
-      "unit_running": { "name": "Running" },
-      "compressor_on": { "name": "Compressor On" },
-      "alarm_output": { "name": "Alarm Output" },
-      "any_fault": { "name": "Any Fault" }
-    },
-    "switch": {
-      "power": { "name": "Power" }
+      "alarm_output": {
+        "name": "Alarm output"
+      },
+      "any_fault": {
+        "name": "Fault"
+      },
+      "compressor_on": {
+        "name": "Compressor"
+      },
+      "unit_running": {
+        "name": "Running"
+      }
     },
     "number": {
-      "heating_target_temp": { "name": "Heating Target Temperature" },
-      "cooling_target_temp": { "name": "Cooling Target Temperature" }
+      "cooling_target_temp": {
+        "name": "Cooling target temperature"
+      },
+      "heating_target_temp": {
+        "name": "Heating target temperature"
+      }
+    },
+    "sensor": {
+      "ac_current": {
+        "name": "AC input current"
+      },
+      "ac_input_voltage": {
+        "name": "AC input voltage"
+      },
+      "ambient_temp": {
+        "name": "Outdoor temperature"
+      },
+      "coil_temp": {
+        "name": "Coil temperature"
+      },
+      "compressor_current": {
+        "name": "Compressor current"
+      },
+      "compressor_freq_running": {
+        "name": "Compressor frequency"
+      },
+      "compressor_freq_setting": {
+        "name": "Compressor target frequency"
+      },
+      "compressor_runtime": {
+        "name": "Compressor running time"
+      },
+      "dc_line_voltage": {
+        "name": "DC bus voltage"
+      },
+      "dhw_tank_temp": {
+        "name": "Hot water tank temperature"
+      },
+      "discharge_temp": {
+        "name": "Discharge temperature"
+      },
+      "failure_raw": {
+        "name": "Failure register {register}"
+      },
+      "inlet_temp": {
+        "name": "Inlet water temperature"
+      },
+      "operating_mode": {
+        "name": "Operating mode",
+        "state": {
+          "cooling": "Cooling",
+          "heating": "Heating",
+          "hot_water": "Hot water",
+          "hot_water_and_cooling": "Hot water and cooling",
+          "hot_water_and_heating": "Hot water and heating"
+        }
+      },
+      "outlet_temp": {
+        "name": "Outlet water temperature"
+      },
+      "output_relays_raw": {
+        "name": "Load outputs"
+      },
+      "room_temp": {
+        "name": "Room temperature"
+      },
+      "suction_temp": {
+        "name": "Suction temperature"
+      },
+      "unit_mode": {
+        "name": "Current mode",
+        "state": {
+          "cooling": "Cooling",
+          "defrost": "Defrost",
+          "heating": "Heating",
+          "hot_water": "Hot water",
+          "sterilize": "Sterilize"
+        }
+      },
+      "water_flow": {
+        "name": "Water flow"
+      }
+    },
+    "switch": {
+      "power": {
+        "name": "Power"
+      }
+    }
+  },
+  "exceptions": {
+    "modbus_error": {
+      "message": "Could not reach the heat pump: {error}"
+    },
+    "no_component_answered": {
+      "message": "The heat pump did not answer any register block"
+    },
+    "write_failed": {
+      "message": "Could not write to the heat pump: {error}"
     }
   }
 }

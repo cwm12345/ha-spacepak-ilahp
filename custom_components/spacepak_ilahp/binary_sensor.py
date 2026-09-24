@@ -1,97 +1,88 @@
+"""Binary sensors for SpacePak ILAHP heat pumps."""
+
 # Written by Claude, guided by Chris.
-"""Binary sensor platform for the SpacePak ILAHP integration."""
+
 from __future__ import annotations
+
+from collections.abc import Callable
+from dataclasses import dataclass
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
+    BinarySensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import EntityCategory
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import DOMAIN
-from .coordinator import IlahpCoordinator
-from .entity import IlahpEntity
+from .coordinator import SpacePakConfigEntry
+from .entity import SpacePakEntity, SpacePakEntityDescription
+from .spacepak_modbus import IlahpHeatPump
+
+PARALLEL_UPDATES = 0
+
+
+@dataclass(frozen=True, kw_only=True)
+class SpacePakBinarySensorDescription(
+    BinarySensorEntityDescription, SpacePakEntityDescription
+):
+    """Describe a SpacePak binary sensor."""
+
+    value_fn: Callable[[IlahpHeatPump], bool | None]
+
+
+BINARY_SENSOR_DESCRIPTIONS: tuple[SpacePakBinarySensorDescription, ...] = (
+    SpacePakBinarySensorDescription(
+        key="unit_running",
+        translation_key="unit_running",
+        component="status",
+        device_class=BinarySensorDeviceClass.RUNNING,
+        value_fn=lambda d: d.status.running,
+    ),
+    SpacePakBinarySensorDescription(
+        key="compressor_on",
+        translation_key="compressor_on",
+        component="status",
+        device_class=BinarySensorDeviceClass.RUNNING,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: d.status.compressor_on,
+    ),
+    SpacePakBinarySensorDescription(
+        key="alarm_output",
+        translation_key="alarm_output",
+        component="status",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        value_fn=lambda d: d.status.alarm_on,
+    ),
+    SpacePakBinarySensorDescription(
+        key="any_fault",
+        translation_key="any_fault",
+        component="faults",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        value_fn=lambda d: d.faults.any_fault,
+    ),
+)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    entry: SpacePakConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    coordinator: IlahpCoordinator = hass.data[DOMAIN][entry.entry_id]
+    """Set up SpacePak binary sensors."""
     async_add_entities(
-        [
-            UnitRunningSensor(coordinator, entry),
-            CompressorOnSensor(coordinator, entry),
-            AlarmOutputSensor(coordinator, entry),
-            AnyFaultSensor(coordinator, entry),
-        ]
+        SpacePakBinarySensor(entry, description)
+        for description in BINARY_SENSOR_DESCRIPTIONS
     )
 
 
-class UnitRunningSensor(IlahpEntity, BinarySensorEntity):
-    _attr_translation_key = "unit_running"
-    _attr_device_class = BinarySensorDeviceClass.RUNNING
+class SpacePakBinarySensor(SpacePakEntity, BinarySensorEntity):
+    """A heat pump on/off state."""
 
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_unit_running"
+    entity_description: SpacePakBinarySensorDescription
 
     @property
-    def is_on(self) -> bool:
-        return self.coordinator.data.unit_running
-
-
-# -- 2026-09-19 expansion --
-
-
-class CompressorOnSensor(IlahpEntity, BinarySensorEntity):
-    """Output relay bit0 (O01), decoded from register 2019 -- see
-    device.py's module docstring for the "Load %" mislabeling this
-    register was previously used for."""
-
-    _attr_translation_key = "compressor_on"
-    _attr_device_class = BinarySensorDeviceClass.RUNNING
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_compressor_on"
-
-    @property
-    def is_on(self) -> bool:
-        return self.coordinator.data.compressor_on
-
-
-class AlarmOutputSensor(IlahpEntity, BinarySensorEntity):
-    """Output relay bit10 (O11 alarm output), decoded from register 2019.
-    Polarity per the manual's own labeling (0=OFF/1=ON for the physical
-    alarm relay) -- not independently live-tested against a real fault."""
-
-    _attr_translation_key = "alarm_output"
-    _attr_device_class = BinarySensorDeviceClass.PROBLEM
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_alarm_output"
-
-    @property
-    def is_on(self) -> bool:
-        return self.coordinator.data.alarm_output
-
-
-class AnyFaultSensor(IlahpEntity, BinarySensorEntity):
-    """True if any of the 9 raw Failure registers (2081-2090) is nonzero.
-    Deliberately not narrowed to "which fault" -- see device.py."""
-
-    _attr_translation_key = "any_fault"
-    _attr_device_class = BinarySensorDeviceClass.PROBLEM
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_any_fault"
-
-    @property
-    def is_on(self) -> bool:
-        return self.coordinator.data.any_fault
+    def is_on(self) -> bool | None:
+        """The state from the latest poll."""
+        return self.entity_description.value_fn(self.coordinator.device)
