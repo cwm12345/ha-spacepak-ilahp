@@ -88,8 +88,6 @@ decoded list of active faults. Attach it to an issue about a wrong value.
 
 ## Known limitations
 
-- The setpoint limits (registers 1162-1165) and the operating mode values come
-  from the manual and have not yet been checked on a live unit.
 - Failure register 3 has no published bit table. A set bit there is reported
   as `failure_3_bit_<n>`.
 - The mode and the installer parameters are not writable, on purpose.
