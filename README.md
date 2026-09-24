@@ -32,9 +32,10 @@ the starting point for that.
 
 ## Requirements
 
-- Home Assistant 2026.9 or newer. The integration gets its Modbus connection
-  from Home Assistant's `modbus` integration, which added shared connections
-  in 2026.9.
+- Home Assistant 2026.10 or newer. The integration gets its Modbus connection
+  from Home Assistant's `modbus` integration, and needs the modbus-connection
+  4.12 it ships from 2026.10. 2026.9 pins 4.10, which lacks the device model
+  this is built on, and the integration fails to import there.
 - A Modbus TCP gateway wired to the heat pump's RS-485 port (the unit speaks
   RTU at 9600 8N1). Two heat pumps can share a gateway, on separate ports or
   under different unit IDs.
