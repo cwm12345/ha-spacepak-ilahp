@@ -8,6 +8,7 @@ from datetime import timedelta
 import logging
 
 from modbus_connection import ModbusTcpParams
+from spacepak_modbus import IlahpHeatPump
 
 from homeassistant.components.modbus import async_get_unit
 from homeassistant.const import CONF_HOST, CONF_PORT, Platform
@@ -15,7 +16,6 @@ from homeassistant.core import HomeAssistant
 
 from .const import CONF_UNIT_ID, SCAN_INTERVAL, SETTINGS_SCAN_INTERVAL
 from .coordinator import SpacePakConfigEntry, SpacePakCoordinator, SpacePakRuntimeData
-from .spacepak_modbus import IlahpHeatPump
 
 _LOGGER = logging.getLogger(__name__)
 

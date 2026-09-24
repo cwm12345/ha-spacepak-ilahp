@@ -1,0 +1,64 @@
+# Written by Claude, guided by Chris.
+# Based on https://github.com/ludeeus/integration_blueprint, adjusted toward
+# https://github.com/home-assistant/core's own pyproject.toml, since the
+# integration is written in core's layout first (see scripts/vendor.py).
+
+target-version = "py314"
+
+# The vendored library is linted in its own repository.
+extend-exclude = ["custom_components/spacepak_ilahp/spacepak_modbus"]
+
+[lint]
+select = [
+    "ALL",
+]
+
+ignore = [
+    "ANN401", # Dynamically typed expressions (typing.Any) are disallowed
+    "D203", # no-blank-line-before-class (incompatible with formatter)
+    "D213", # multi-line-summary-second-line (core puts the summary on the first line)
+    "COM812", # incompatible with formatter
+    "ISC001", # incompatible with formatter
+    "E501", # line length is the formatter's job
+    "TC001", # core imports typing-only names at runtime
+    "TC002",
+    "TC003",
+    "ARG001", # platform and diagnostics signatures are fixed by Home Assistant
+    "ARG002",
+    "FBT001", # core does not enforce the boolean-trap rules
+    "FBT003",
+    "PLR2004", # core does not enforce magic-value comparisons
+]
+
+[lint.per-file-ignores]
+"**/tests/**" = [
+    "ARG001", # fixtures requested for their side effects
+    "ARG005",
+    "D103",
+    "FBT003",
+    "PLR2004", # expected register values read clearer inline
+    "S101", # pytest asserts
+    "SLF001",
+]
+"scripts/*" = [
+    "PLC0415", # homeassistant is imported only when building
+    "S603",
+    "S607",
+    "T201",
+]
+
+[lint.isort]
+# Match Home Assistant core, where the integration is written first.
+force-sort-within-sections = true
+known-first-party = ["homeassistant"]
+combine-as-imports = true
+split-on-trailing-comma = false
+
+[lint.flake8-pytest-style]
+fixture-parentheses = false
+
+[lint.pyupgrade]
+keep-runtime-typing = true
+
+[lint.mccabe]
+max-complexity = 25

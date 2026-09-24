@@ -1,116 +1,115 @@
+<!-- Written by Claude, guided by Chris. -->
+
 # SpacePak ILAHP for Home Assistant
 
-A `config_entry`-owned Home Assistant custom integration for SpacePak
-Solstice Inverter Extreme (ILAHP) heat pumps over Modbus TCP, built on
-Home Assistant's newer [Modbus device
-model](https://developers.home-assistant.io/blog/2026/07/05/modernizing-modbus/)
-(`modbus-connection` / `modbus_connection.model`) rather than a bespoke
-Modbus client. Each heat pump shows up as a proper HA device with typed,
-correctly-scaled entities, instead of a pile of raw, deviceless
-`modbus:` YAML sensors.
+A Home Assistant integration for SpacePak Solstice Inverter Extreme (ILAHP)
+air-to-water heat pumps, over Modbus TCP. Each heat pump is one device, with
+its temperatures, compressor data, faults, power switch and water setpoints as
+entities.
+
+It follows Home Assistant's
+[Modbus device integration guide](https://developers.home-assistant.io/docs/modbus/introduction),
+using the same layering as the built-in `sofar` integration:
+
+1. **[spacepak-modbus](https://github.com/cwm12345/spacepak-modbus)**, a
+   standalone device library built on
+   [modbus-connection](https://github.com/home-assistant-libs/modbus-connection).
+   It holds the register map and is tested without Home Assistant.
+2. **[`core/`](core/)**, the integration in Home Assistant core's layout
+   (`homeassistant/components/spacepak_ilahp` and its tests), ready to be
+   proposed to core.
+3. **[`custom_components/spacepak_ilahp`](custom_components/spacepak_ilahp/)**,
+   the same integration with the library copied in, installable through HACS.
+   [`scripts/vendor.py`](scripts/vendor.py) generates it from the first two.
 
 ## Status
 
-This is a working reference implementation, pulled from my own running
-Home Assistant deployment (two ILAHP units) and published as-is. **I am
-not maintaining this as an ongoing package** — no commitment to triage
-issues, accept PRs, or track future Home Assistant API changes. Feel free
-to fork it, adapt it, or copy pieces of it into your own setup. If it's
-useful, great; if you hit something that doesn't work on your hardware or
-your HA version, you're welcome to open an issue, but I can't promise a
-response.
+This is a working reference pulled from one real installation, not an actively
+maintained package. There's no commitment to triage issues or pull requests,
+or to follow future Home Assistant changes. Forks are welcome. So is anyone
+who wants to take it further, including toward Home Assistant core: `core/` is
+the starting point for that.
 
-If you're a more serious maintainer and see something here worth turning
-into an official core Home Assistant integration, take it — this code is
-public domain (Unlicense), no permission needed. It's already built on
-HA's new `modbus-connection`/device-model library specifically so it'd be
-a smaller step to core than a from-scratch rewrite, if anyone wants to
-take it there.
+## Requirements
 
-## Hardware this was built and tested against
-
-SpacePak Solstice Inverter Extreme (ILAHP) air-source heat pumps, Modbus
-TCP (via a serial-to-TCP gateway in my deployment; a direct Modbus TCP
-unit should work identically). Register addresses were taken from the
-manufacturer's Modbus IOM manual and cross-checked against live reads —
-see `device.py`'s module docstring for the full citation and any
-discrepancies found along the way.
-
-## What it does
-
-One config entry per physical unit (if you have two sharing a gateway,
-add two entries with different ports). Each entry creates one HA device
-with:
-
-- `switch.power` — master on/off.
-- `number.heating_target_temp` / `number.cooling_target_temp` — writable
-  setpoints, bounded 10–60°C.
-- `binary_sensor.unit_running`, `binary_sensor.compressor_on`,
-  `binary_sensor.alarm_output`, `binary_sensor.any_fault` — computed from
-  the unit's status/output-relay/fault registers.
-- Telemetry sensors: outlet/inlet/ambient/room/coil/suction/discharge/DHW
-  tank temperatures, AC current, compressor current, compressor runtime,
-  DC line voltage, AC input voltage, compressor frequency (setting and
-  running), water flow, current operating mode, and 9 raw fault/alarm
-  bitmask registers (diagnostic).
-- Config flow validates against the live unit before creating the entry.
-- Polls every 30s via a `DataUpdateCoordinator`.
-
-**Deliberately not exposed:** the installer-level configuration/tuning
-register block (compressor curves, EEV steps, defrost timing, weather
-compensation, scheduling — roughly 260 registers). These are setup
-parameters, not telemetry, and writing to them risks real HVAC
-misconfiguration — this integration only exposes what's safe to read and
-the two setpoints that are safe to write.
-
-**Deliberately read-only:** the operating-mode register is exposed as a
-raw diagnostic number, not a writable `select` entity — the manual
-documents it as read/write, but the exact integer-to-mode mapping was
-never confirmed against a live unit in my deployment. Don't wire up write
-access to it on a guess; confirm the mapping against your own unit's
-manual/behavior first.
-
-## Real functional testing, not just syntax-checking
-
-Because this integration is built on `modbus_connection.model`, it could
-be tested against that library's own in-memory mock backend — seeding
-fake register values, running a real `async_update()`, and confirming
-both correct read-side scaling and correct write-side raw values land.
-That's genuine behavioral confidence, not just "it compiles."
+- Home Assistant 2026.9 or newer. The integration gets its Modbus connection
+  from Home Assistant's `modbus` integration, which added shared connections
+  in 2026.9.
+- A Modbus TCP gateway wired to the heat pump's RS-485 port (the unit speaks
+  RTU at 9600 8N1). Two heat pumps can share a gateway, on separate ports or
+  under different unit IDs.
 
 ## Installation
 
-**Via HACS (custom repository):** HACS → Integrations → ⋮ → Custom
-repositories → add this repo's URL, category "Integration" → install
-"SpacePak ILAHP" → restart HA.
+**HACS:** add this repository as a custom repository (category: Integration),
+install **SpacePak ILAHP**, and restart Home Assistant.
 
-**Manual:** copy `custom_components/spacepak_ilahp/` into your HA
-config's `custom_components/` directory → restart HA.
+**Manually:** copy `custom_components/spacepak_ilahp` into your
+`config/custom_components/` folder and restart.
 
-Then: Settings → Devices & Services → Add Integration → "SpacePak
-ILAHP". Enter the Modbus TCP gateway host/port and the unit's Modbus
-slave ID.
+Then go to **Settings → Devices & services → Add integration → SpacePak
+ILAHP** and enter:
 
-**Before writing to `power`, `heating_target_temp`, or
-`cooling_target_temp`:** these are live control points on real HVAC
-equipment. Know what you're setting before you set it.
+- the gateway's host or IP address
+- the gateway's TCP port for this heat pump
+- the heat pump's Modbus unit ID (installer parameter H10, default 1)
 
-## Files
+Add one entry per heat pump.
 
-- `device.py` — the standalone device model (no HA imports, per HA's
-  convention for this new Modbus device model). This is where the
-  register map lives — read it before trusting it against your own unit.
-- `manifest.json`, `const.py`, `config_flow.py`, `__init__.py`,
-  `coordinator.py`, `entity.py` — integration scaffolding.
-- `sensor.py`, `binary_sensor.py`, `switch.py`, `number.py` — entity
-  platforms.
-- `strings.json` / `translations/en.json` — config flow + entity text.
+## What you get
 
-## Validation
+| Entity | Notes |
+| :--- | :--- |
+| Outlet, inlet, outdoor, room and hot water tank temperatures | °C, convert in the UI as you like |
+| Coil, suction and discharge temperatures | Diagnostic |
+| AC input current, compressor frequency | |
+| Compressor current, voltages, target frequency, water flow | Diagnostic |
+| Current mode | Cooling, heating, defrost, sterilize or hot water |
+| Operating mode | The mode the unit is set to, read-only |
+| Compressor running time | Keeps its last value while the unit is offline |
+| Running, Compressor, Alarm output, Fault | Binary sensors |
+| Power | Switch |
+| Heating and cooling target temperature | Bounded by the unit's own configured limits (R08-R11) |
+| Load outputs, failure registers 1-9 | Raw words, diagnostic, disabled by default |
 
-All files pass `py_compile` / JSON validation, every module imports
-cleanly against a real installed `homeassistant` package, config flow
-self-registers correctly, and a mock-backend functional test exercises
-every field's read-side scaling plus both writable setpoints. Deployed
-and running against real hardware (two physical heat pumps) since
-September 2026.
+The diagnostics download includes every register read, undecoded, and the
+decoded list of active faults. Attach it to an issue about a wrong value.
+
+## Upgrading from 0.1
+
+- Config entries migrate on their own. The unique ID now includes the Modbus
+  unit ID, so two heat pumps on one gateway port no longer collide.
+- Entity unique IDs are unchanged, so history carries over.
+- The raw "Mode" sensor is gone. The **Operating mode** sensor decodes the
+  same register (1012). Delete the old entity once it shows as unavailable.
+- Currents, voltages and running hours are now decoded as unsigned, per the
+  manual. Values above 3276.7 A (or 32767 h) used to wrap negative.
+
+## Known limitations
+
+- The setpoint limits (registers 1162-1165) and the operating mode values come
+  from the manual and have not yet been checked on a live unit.
+- Failure register 3 has no published bit table. A set bit there is reported
+  as `failure_3_bit_<n>`.
+- The mode and the installer parameters are not writable, on purpose.
+
+## Development
+
+```bash
+scripts/setup      # install Home Assistant and the dev requirements
+scripts/develop    # run Home Assistant with this integration
+python -m pytest   # the custom integration's tests
+scripts/lint
+```
+
+To change the integration, edit `core/` (and the library, in its own
+repository), then regenerate the custom integration:
+
+```bash
+python scripts/vendor.py --library ../spacepak-modbus --version 0.2.0
+scripts/lint
+```
+
+## License
+
+[Unlicense](LICENSE): public domain.

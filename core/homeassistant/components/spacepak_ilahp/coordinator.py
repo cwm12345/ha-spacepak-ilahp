@@ -11,6 +11,7 @@ import logging
 
 from modbus_connection import ModbusError
 from modbus_connection.model import UpdateReport
+from spacepak_modbus import SETTINGS, IlahpHeatPump
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -18,7 +19,6 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, MANUFACTURER, MODEL
-from .spacepak_modbus import SETTINGS, IlahpHeatPump
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -8,6 +8,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from modbus_connection import ModbusError
+from spacepak_modbus import IlahpHeatPump
 
 from homeassistant.components.number import (
     NumberDeviceClass,
@@ -29,7 +30,6 @@ from .const import (
 )
 from .coordinator import SpacePakConfigEntry
 from .entity import SpacePakEntity, SpacePakEntityDescription
-from .spacepak_modbus import IlahpHeatPump
 
 PARALLEL_UPDATES = 1
 

@@ -7,6 +7,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from spacepak_modbus import IlahpHeatPump
+
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
@@ -18,7 +20,6 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import SpacePakConfigEntry
 from .entity import SpacePakEntity, SpacePakEntityDescription
-from .spacepak_modbus import IlahpHeatPump
 
 PARALLEL_UPDATES = 0
 

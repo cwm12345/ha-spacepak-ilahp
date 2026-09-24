@@ -8,6 +8,7 @@ import logging
 from typing import Any
 
 from modbus_connection import ModbusError, ModbusTcpParams
+from spacepak_modbus import IlahpHeatPump
 import voluptuous as vol
 
 from homeassistant.components.modbus import async_get_temporary_unit
@@ -24,7 +25,6 @@ from homeassistant.helpers.selector import (
 
 from . import unique_id_for
 from .const import CONF_UNIT_ID, DEFAULT_NAME, DEFAULT_PORT, DEFAULT_UNIT_ID, DOMAIN
-from .spacepak_modbus import IlahpHeatPump
 
 _LOGGER = logging.getLogger(__name__)
 

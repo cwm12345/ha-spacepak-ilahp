@@ -7,6 +7,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from spacepak_modbus import IlahpHeatPump, OperatingMode, UnitMode
+
 from homeassistant.components.sensor import (
     RestoreSensor,
     SensorDeviceClass,
@@ -28,7 +30,6 @@ from homeassistant.helpers.typing import StateType
 
 from .coordinator import SpacePakConfigEntry
 from .entity import SpacePakEntity, SpacePakEntityDescription
-from .spacepak_modbus import IlahpHeatPump, OperatingMode, UnitMode
 
 PARALLEL_UPDATES = 0
 
