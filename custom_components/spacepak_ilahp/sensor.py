@@ -38,6 +38,7 @@ class SpacePakSensorDescription(SensorEntityDescription, SpacePakEntityDescripti
     """Describe a SpacePak sensor."""
 
     value_fn: Callable[[IlahpHeatPump], StateType]
+    exists_fn: Callable[[IlahpHeatPump], bool] = lambda _: True
 
 
 def _temperature(
@@ -67,8 +68,17 @@ SENSOR_DESCRIPTIONS: tuple[SpacePakSensorDescription, ...] = (
     _temperature("outlet_temp", lambda d: d.measurements.outlet_temperature),
     _temperature("inlet_temp", lambda d: d.measurements.inlet_temperature),
     _temperature("ambient_temp", lambda d: d.measurements.ambient_temperature),
-    _temperature("room_temp", lambda d: d.measurements.room_temperature),
-    _temperature("dhw_tank_temp", lambda d: d.measurements.hot_water_tank_temperature),
+    SpacePakSensorDescription(
+        key="dhw_tank_temp",
+        translation_key="dhw_tank_temp",
+        component="measurements",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d: d.measurements.hot_water_tank_temperature,
+        # The tank sensor is only wired when the unit's hot water function is on.
+        exists_fn=lambda d: bool(d.controls.hot_water_enabled),
+    ),
     _temperature(
         "coil_temp", lambda d: d.measurements.coil_temperature, diagnostic=True
     ),
@@ -139,14 +149,6 @@ SENSOR_DESCRIPTIONS: tuple[SpacePakSensorDescription, ...] = (
         value_fn=lambda d: d.measurements.compressor_frequency_target,
     ),
     SpacePakSensorDescription(
-        key="water_flow",
-        translation_key="water_flow",
-        component="measurements",
-        state_class=SensorStateClass.MEASUREMENT,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d: d.measurements.water_flow,
-    ),
-    SpacePakSensorDescription(
         key="unit_mode",
         translation_key="unit_mode",
         component="status",
@@ -208,6 +210,7 @@ async def async_setup_entry(
             else SpacePakSensor
         )(entry, description)
         for description in SENSOR_DESCRIPTIONS
+        if description.exists_fn(entry.runtime_data.device)
     )
 
 

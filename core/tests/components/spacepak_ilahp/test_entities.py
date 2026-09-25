@@ -3,6 +3,7 @@
 # Written by Claude, guided by Chris.
 
 from datetime import timedelta
+from unittest.mock import patch
 
 from freezegun.api import FrozenDateTimeFactory
 from modbus_connection import IllegalDataValueError
@@ -43,7 +44,6 @@ POWER = "switch.spacepak_ilahp_power"
         ("sensor.spacepak_ilahp_discharge_temperature", "71.5"),
         ("sensor.spacepak_ilahp_ac_input_current", "14.2"),
         ("sensor.spacepak_ilahp_compressor_frequency", "60"),
-        ("sensor.spacepak_ilahp_water_flow", "3.25"),
         ("sensor.spacepak_ilahp_current_mode", "heating"),
         ("sensor.spacepak_ilahp_operating_mode", "heating"),
         ("sensor.spacepak_ilahp_compressor_running_time", "12345"),
@@ -195,3 +195,34 @@ async def test_cooling_outputs(
         hass.states.get("binary_sensor.spacepak_ilahp_crankcase_heater").state
         == STATE_OFF
     )
+
+
+async def test_tank_sensor_only_with_hot_water_enabled(
+    hass: HomeAssistant, init_integration: MockConfigEntry
+) -> None:
+    """With the hot water function off (H28 = 0) there is no tank sensor."""
+    assert hass.states.get("sensor.spacepak_ilahp_hot_water_tank_temperature") is None
+    assert hass.states.get("sensor.spacepak_ilahp_room_temperature") is None
+
+
+async def test_tank_sensor_with_hot_water_enabled(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_connection: MockModbusConnection,
+) -> None:
+    """With the hot water function on, the tank sensor is created."""
+    unit = mock_connection.for_unit(1)
+    unit.holding[1028] = 1
+    unit.holding[2047] = 480
+    mock_config_entry.add_to_hass(hass)
+    with patch(
+        "homeassistant.components.spacepak_ilahp.async_get_unit",
+        side_effect=lambda hass, entry, params, unit_id: mock_connection.for_unit(
+            unit_id
+        ),
+    ):
+        await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+    state = hass.states.get("sensor.spacepak_ilahp_hot_water_tank_temperature")
+    assert state is not None
+    assert state.state == "48.0"

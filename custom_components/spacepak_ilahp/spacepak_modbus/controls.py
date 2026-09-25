@@ -41,6 +41,10 @@ class Controls(Component):
     operating_mode = enum(1012, OperatingMode)
     """The mode the unit is set to run in. Read-only here."""
 
+    hot_water_enabled = boolean(1028)
+    """H28, whether the unit's own hot water (DHW) function is enabled. When
+    it is not, the hot water tank temperature has no sensor behind it."""
+
     heating_target_temperature = gauge(
         1158, 0.1, unit="°C", writable=_within(-30.0, 99.0)
     )
