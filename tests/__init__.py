@@ -14,6 +14,7 @@ MOCK_UNIQUE_ID = f"{MOCK_HOST}:502:1"
 HOLDING: dict[int, int] = {
     1011: 1,  # on
     1012: 1,  # operating mode: heating
+    1028: 0,  # H28 hot water function off
     1158: 450,  # heating target 45.0 C
     1159: 70,  # cooling target 7.0 C
     1162: 80,  # min cooling setpoint 8.0 C
@@ -34,11 +35,9 @@ HOLDING: dict[int, int] = {
     2051: 0xFFE2,  # suction -3.0 C
     2053: 715,  # discharge 71.5 C
     2057: 142,  # AC input 14.2 A
-    2058: 210,  # room 21.0 C
     2062: 238,  # AC input 238 V
     2071: 62,  # compressor target 62 Hz
     2072: 60,  # compressor running 60 Hz
-    2077: 325,  # water flow 3.25
     **dict.fromkeys(range(2081, 2091), 0),  # no faults
 }
 

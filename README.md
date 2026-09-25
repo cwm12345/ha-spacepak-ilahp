@@ -61,10 +61,11 @@ Add one entry per heat pump.
 
 | Entity | Notes |
 | :--- | :--- |
-| Outlet, inlet, outdoor, room and hot water tank temperatures | °C, convert in the UI as you like |
+| Outlet, inlet and outdoor temperatures | °C, convert in the UI as you like |
+| Hot water tank temperature | Only when the unit's own hot water function (H28) is enabled; otherwise the sensor isn't wired |
 | Coil, suction and discharge temperatures | Diagnostic |
 | AC input current, compressor frequency | |
-| Compressor current, voltages, target frequency, water flow | Diagnostic |
+| Compressor current, voltages, target frequency | Diagnostic |
 | Current mode | Cooling, heating, defrost, sterilize or hot water |
 | Operating mode | The mode the unit is set to, read-only |
 | Compressor running time | Keeps its last value while the unit is offline |
@@ -84,6 +85,10 @@ decoded list of active faults. Attach it to an issue about a wrong value.
 - Entity unique IDs are unchanged, so history carries over.
 - The raw "Mode" sensor is gone. The **Operating mode** sensor decodes the
   same register (1012). Delete the old entity once it shows as unavailable.
+- Room temperature and water flow are gone: the manual lists both as not used
+  on this unit. The hot water tank temperature only appears when the unit's
+  hot water function is on. Delete the old entities once they show as
+  unavailable.
 - Currents, voltages and running hours are now decoded as unsigned, per the
   manual. Values above 3276.7 A (or 32767 h) used to wrap negative.
 

@@ -119,9 +119,6 @@
       "output_relays_raw": {
         "name": "Load outputs"
       },
-      "room_temp": {
-        "name": "Room temperature"
-      },
       "suction_temp": {
         "name": "Suction temperature"
       },
@@ -134,9 +131,6 @@
           "hot_water": "Hot water",
           "sterilize": "Sterilize"
         }
-      },
-      "water_flow": {
-        "name": "Water flow"
       }
     },
     "switch": {

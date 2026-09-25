@@ -11,8 +11,9 @@ __all__ = ["Measurements"]
 class Measurements(Component):
     """The unit's live sensor readings.
 
-    Temperatures are signed tenths of a degree Celsius. Currents, voltages,
-    frequencies and flow are unsigned.
+    Temperatures are signed tenths of a degree Celsius. Currents, voltages
+    and frequencies are unsigned. The manual lists T09 (room temperature, 2058)
+    and T39 (water flow, 2077) as not used on this unit, so they are left out.
     """
 
     compressor_current = gauge(2042, 0.1, signed=False, unit="A")
@@ -28,7 +29,8 @@ class Measurements(Component):
     """T02, water leaving the unit."""
 
     hot_water_tank_temperature = gauge(2047, 0.1, unit="°C")
-    """T08."""
+    """T08. Only wired when the unit's hot water function is enabled; see
+    ``Controls.hot_water_enabled``."""
 
     ambient_temperature = gauge(2048, 0.1, unit="°C")
     """T04, outdoor air."""
@@ -45,9 +47,6 @@ class Measurements(Component):
     ac_input_current = gauge(2057, 0.1, signed=False, unit="A")
     """T35."""
 
-    room_temperature = gauge(2058, 0.1, unit="°C")
-    """T09."""
-
     ac_input_voltage = integer(2062, signed=False, unit="V")
     """T34."""
 
@@ -56,6 +55,3 @@ class Measurements(Component):
 
     compressor_frequency = integer(2072, signed=False, unit="Hz")
     """T31, the frequency the compressor is running at."""
-
-    water_flow = gauge(2077, 0.01, signed=False)
-    """T39. The manual does not state a unit."""
