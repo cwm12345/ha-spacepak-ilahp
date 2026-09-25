@@ -2,10 +2,13 @@
 
 # Written by Claude, guided by Chris.
 
+from datetime import timedelta
+
+from freezegun.api import FrozenDateTimeFactory
 from modbus_connection import IllegalDataValueError
 from modbus_connection.mock import MockModbusConnection
 import pytest
-from tests.common import MockConfigEntry
+from tests.common import MockConfigEntry, async_fire_time_changed
 from tests.components.diagnostics import get_diagnostics_for_config_entry
 from tests.typing import ClientSessionGenerator
 
@@ -48,6 +51,12 @@ POWER = "switch.spacepak_ilahp_power"
         ("binary_sensor.spacepak_ilahp_compressor", STATE_ON),
         ("binary_sensor.spacepak_ilahp_alarm_output", STATE_OFF),
         ("binary_sensor.spacepak_ilahp_fault", STATE_OFF),
+        ("binary_sensor.spacepak_ilahp_water_pump", STATE_ON),
+        ("binary_sensor.spacepak_ilahp_fan", STATE_OFF),
+        ("binary_sensor.spacepak_ilahp_reversing_valve", STATE_OFF),
+        ("binary_sensor.spacepak_ilahp_electric_heater_stage_1", STATE_OFF),
+        ("binary_sensor.spacepak_ilahp_electric_heater_stage_2", STATE_OFF),
+        ("binary_sensor.spacepak_ilahp_crankcase_heater", STATE_OFF),
         (POWER, STATE_ON),
         (HEATING_TARGET, "45.0"),
         ("number.spacepak_ilahp_cooling_target_temperature", "7.0"),
@@ -167,3 +176,22 @@ async def test_fault_decoding(
     assert diagnostics["active_faults"] == ["high_pressure"]
     assert diagnostics["registers"]["holding"]["2046"] == 432
     assert "192.0.2.10" not in str(diagnostics)
+
+
+async def test_cooling_outputs(
+    hass: HomeAssistant,
+    mock_connection: MockModbusConnection,
+    init_integration: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Relay word 85 (seen live in cooling) lights compressor, fan, pump and valve."""
+    mock_connection.for_unit(1).holding[2019] = 85
+    freezer.tick(timedelta(seconds=31))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    for name in ("compressor", "fan", "water_pump", "reversing_valve"):
+        assert hass.states.get(f"binary_sensor.spacepak_ilahp_{name}").state == STATE_ON
+    assert (
+        hass.states.get("binary_sensor.spacepak_ilahp_crankcase_heater").state
+        == STATE_OFF
+    )

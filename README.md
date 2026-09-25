@@ -69,6 +69,7 @@ Add one entry per heat pump.
 | Operating mode | The mode the unit is set to, read-only |
 | Compressor running time | Keeps its last value while the unit is offline |
 | Running, Compressor, Alarm output, Fault | Binary sensors |
+| Water pump, Fan, Reversing valve, Electric heater stages 1-2, Crankcase heater | Diagnostic binary sensors, decoded from the load-output register |
 | Power | Switch |
 | Heating and cooling target temperature | Bounded by the unit's own configured limits (R08-R11) |
 | Load outputs, failure registers 1-9 | Raw words, diagnostic, disabled by default |
