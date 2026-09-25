@@ -33,8 +33,26 @@
       "compressor_on": {
         "name": "Compressor"
       },
+      "crankcase_heater": {
+        "name": "Crankcase heater"
+      },
+      "electric_heater_1": {
+        "name": "Electric heater stage 1"
+      },
+      "electric_heater_2": {
+        "name": "Electric heater stage 2"
+      },
+      "fan": {
+        "name": "Fan"
+      },
+      "reversing_valve": {
+        "name": "Reversing valve"
+      },
       "unit_running": {
         "name": "Running"
+      },
+      "water_pump": {
+        "name": "Water pump"
       }
     },
     "number": {

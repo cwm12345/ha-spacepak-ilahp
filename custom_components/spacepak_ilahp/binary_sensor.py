@@ -18,7 +18,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import SpacePakConfigEntry
 from .entity import SpacePakEntity, SpacePakEntityDescription
-from .spacepak_modbus import IlahpHeatPump
+from .spacepak_modbus import IlahpHeatPump, Outputs
 
 PARALLEL_UPDATES = 0
 
@@ -30,6 +30,29 @@ class SpacePakBinarySensorDescription(
     """Describe a SpacePak binary sensor."""
 
     value_fn: Callable[[IlahpHeatPump], bool | None]
+
+
+def _output(*outputs: Outputs) -> Callable[[IlahpHeatPump], bool | None]:
+    """Read whether any of the given load outputs is energized."""
+
+    def value(device: IlahpHeatPump) -> bool | None:
+        energized = device.status.outputs
+        return None if energized is None else any(o in energized for o in outputs)
+
+    return value
+
+
+def _output_sensor(
+    key: str, *outputs: Outputs, running: bool = True
+) -> SpacePakBinarySensorDescription:
+    return SpacePakBinarySensorDescription(
+        key=key,
+        translation_key=key,
+        component="status",
+        device_class=BinarySensorDeviceClass.RUNNING if running else None,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=_output(*outputs),
+    )
 
 
 BINARY_SENSOR_DESCRIPTIONS: tuple[SpacePakBinarySensorDescription, ...] = (
@@ -62,6 +85,12 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[SpacePakBinarySensorDescription, ...] = (
         device_class=BinarySensorDeviceClass.PROBLEM,
         value_fn=lambda d: d.faults.any_fault,
     ),
+    _output_sensor("water_pump", Outputs.WATER_PUMP),
+    _output_sensor("fan", Outputs.FAN_HIGH_SPEED, Outputs.FAN_LOW_SPEED),
+    _output_sensor("reversing_valve", Outputs.FOUR_WAY_VALVE, running=False),
+    _output_sensor("electric_heater_1", Outputs.ELECTRIC_HEATER_1),
+    _output_sensor("electric_heater_2", Outputs.ELECTRIC_HEATER_2),
+    _output_sensor("crankcase_heater", Outputs.CRANKCASE_HEATER),
 )
 
 
