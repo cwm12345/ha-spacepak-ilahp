@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from modbus_connection.model import Component, boolean, enum, flags, integer
+from modbus_connection.model import Component, boolean, enum, flags, gauge, integer
 
 from .enums import OpenInputs, Outputs, UnitMode
 
@@ -11,13 +11,21 @@ __all__ = ["Status"]
 
 
 class Status(Component):
-    """Run state, current mode, load outputs, field inputs and compressor hours."""
+    """Run state, mode, effective targets, outputs, inputs and compressor hours."""
 
     running = boolean(2011)
     """Unit state: on and running."""
 
     unit_mode = enum(2012, UnitMode)
     """What the unit is doing right now, defrost included."""
+
+    limited_target_temperature = gauge(2013, 0.1, unit="°C")
+    """The water target after the unit's own limits are applied."""
+
+    compensated_heating_target_temperature = gauge(2014, 0.1, unit="°C")
+    """The heating water target after weather compensation. Only meaningful
+    while ``Tuning.weather_compensation_enabled``; with it off some units
+    report 0 here and others the plain target."""
 
     outputs = flags(2019, Outputs)
     """The load outputs currently energized."""

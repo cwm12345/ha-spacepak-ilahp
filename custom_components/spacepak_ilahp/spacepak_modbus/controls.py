@@ -41,9 +41,22 @@ class Controls(Component):
     operating_mode = enum(1012, OperatingMode)
     """The mode the unit is set to run in. Read-only here."""
 
+    cooling_enabled = boolean(1021)
+    """H05, whether the installer enabled cooling. It decides which values
+    ``operating_mode`` can take."""
+
+    field_wired_control = boolean(1023)
+    """H07, true when the unit takes its commands from field-wired inputs
+    ("Slave" on the touchscreen) rather than its own display. In that mode a
+    ``power_on`` write alone does not start the unit; the remote on/off input
+    decides."""
+
     hot_water_enabled = boolean(1028)
     """H28, whether the unit's own hot water (DHW) function is enabled. When
     it is not, the hot water tank temperature has no sensor behind it."""
+
+    silence_mode = boolean(1030)
+    """H22, whisper mode."""
 
     heating_target_temperature = gauge(
         1158, 0.1, unit="°C", writable=_within(-30.0, 99.0)

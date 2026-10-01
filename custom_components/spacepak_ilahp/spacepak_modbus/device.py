@@ -12,6 +12,7 @@ from .controls import Controls
 from .faults import Faults
 from .measurements import Measurements
 from .status import Status
+from .tuning import Tuning
 
 if TYPE_CHECKING:
     from modbus_connection import ModbusUnit
@@ -21,7 +22,7 @@ __all__ = ["READINGS", "SETTINGS", "IlahpHeatPump"]
 READINGS: tuple[str, ...] = ("status", "measurements", "faults")
 """Components that change on their own: what the unit measures and reports."""
 
-SETTINGS: tuple[str, ...] = ("controls",)
+SETTINGS: tuple[str, ...] = ("controls", "tuning")
 """Components that change when something writes them."""
 
 
@@ -38,13 +39,14 @@ class IlahpHeatPump(Device):
         self.status = Status(unit)
         self.measurements = Measurements(unit)
         self.faults = Faults(unit)
+        self.tuning = Tuning(unit)
 
     async def async_update_readings(self) -> UpdateReport:
         """Refresh status, measurements and faults."""
         return await self.async_poll(READINGS)
 
     async def async_update_settings(self) -> UpdateReport:
-        """Refresh power, mode and setpoints. Run one after a write."""
+        """Refresh power, mode, setpoints and tuning. Run one after a write."""
         return await self.async_poll(SETTINGS)
 
     async def async_update(self) -> UpdateReport:

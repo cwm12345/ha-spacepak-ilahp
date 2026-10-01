@@ -30,7 +30,7 @@ from homeassistant.components.switch import (
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
+from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
@@ -66,6 +66,28 @@ POWER = "switch.spacepak_ilahp_power"
         ("binary_sensor.spacepak_ilahp_heating_cooling_on_off_input", STATE_ON),
         ("binary_sensor.spacepak_ilahp_heating_selected_input", STATE_ON),
         ("binary_sensor.spacepak_ilahp_flow_switch", STATE_ON),
+        ("sensor.spacepak_ilahp_effective_water_target", "45.0"),
+        ("sensor.spacepak_ilahp_weather_compensated_heating_target", STATE_UNKNOWN),
+        ("sensor.spacepak_ilahp_shutdown_outdoor_temperature", "-30.0"),
+        ("sensor.spacepak_ilahp_heating_restart_outdoor_temperature", "10.0"),
+        ("sensor.spacepak_ilahp_heating_restart_differential", "2.0"),
+        ("sensor.spacepak_ilahp_heating_stop_differential", "2.0"),
+        ("sensor.spacepak_ilahp_cooling_restart_differential", "2.0"),
+        ("sensor.spacepak_ilahp_cooling_stop_differential", "2.5"),
+        ("sensor.spacepak_ilahp_low_ambient_compensation_start", "-17.8"),
+        ("sensor.spacepak_ilahp_low_ambient_compensation_end", "-23.3"),
+        ("sensor.spacepak_ilahp_low_ambient_heating_target", "40.6"),
+        ("sensor.spacepak_ilahp_weather_compensation_slope", "1.0"),
+        ("sensor.spacepak_ilahp_weather_compensation_offset", "20.0"),
+        ("sensor.spacepak_ilahp_pump_mode", "economic"),
+        ("sensor.spacepak_ilahp_idle_pump_interval", "30"),
+        ("sensor.spacepak_ilahp_idle_pump_run_time", "3"),
+        ("sensor.spacepak_ilahp_compressor_minimum_frequency", "30"),
+        ("sensor.spacepak_ilahp_compressor_maximum_frequency", "90"),
+        ("binary_sensor.spacepak_ilahp_weather_compensation", STATE_OFF),
+        ("binary_sensor.spacepak_ilahp_cooling_enabled", STATE_ON),
+        ("binary_sensor.spacepak_ilahp_field_wired_control", STATE_ON),
+        ("binary_sensor.spacepak_ilahp_silence_mode", STATE_OFF),
         (POWER, STATE_ON),
         (HEATING_TARGET, "45.0"),
         ("number.spacepak_ilahp_cooling_target_temperature", "7.0"),
@@ -255,3 +277,33 @@ async def test_idle_field_inputs(
         ("heating_selected_input", STATE_ON),
     ):
         assert hass.states.get(f"binary_sensor.spacepak_ilahp_{name}").state == state
+
+
+async def test_compensated_target_with_weather_compensation_on(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_connection: MockModbusConnection,
+) -> None:
+    """With weather compensation on, the compensated target is reported."""
+    unit = mock_connection.for_unit(1)
+    unit.holding[1236] = 1
+    unit.holding[2014] = 430
+    mock_config_entry.add_to_hass(hass)
+    with patch(
+        "custom_components.spacepak_ilahp.async_get_unit",
+        side_effect=lambda hass, entry, params, unit_id: mock_connection.for_unit(
+            unit_id
+        ),
+    ):
+        await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+    assert (
+        hass.states.get("binary_sensor.spacepak_ilahp_weather_compensation").state
+        == STATE_ON
+    )
+    assert (
+        hass.states.get(
+            "sensor.spacepak_ilahp_weather_compensated_heating_target"
+        ).state
+        == "43.0"
+    )

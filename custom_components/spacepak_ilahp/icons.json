@@ -4,6 +4,9 @@
       "compressor_on": {
         "default": "mdi:heat-pump"
       },
+      "cooling_enabled": {
+        "default": "mdi:snowflake"
+      },
       "crankcase_heater": {
         "default": "mdi:heating-coil"
       },
@@ -15,6 +18,9 @@
       },
       "fan": {
         "default": "mdi:fan"
+      },
+      "field_wired_control": {
+        "default": "mdi:electric-switch"
       },
       "flow_switch": {
         "default": "mdi:water-check"
@@ -31,8 +37,14 @@
       "reversing_valve": {
         "default": "mdi:valve"
       },
+      "silence_mode": {
+        "default": "mdi:volume-off"
+      },
       "water_pump": {
         "default": "mdi:pump"
+      },
+      "weather_compensation": {
+        "default": "mdi:sun-thermometer-outline"
       }
     },
     "sensor": {
@@ -51,8 +63,14 @@
       "output_relays_raw": {
         "default": "mdi:electric-switch"
       },
+      "pump_mode": {
+        "default": "mdi:pump"
+      },
       "unit_mode": {
         "default": "mdi:heat-pump"
+      },
+      "weather_compensation_slope": {
+        "default": "mdi:chart-line-variant"
       }
     },
     "switch": {

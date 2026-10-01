@@ -33,6 +33,9 @@
       "compressor_on": {
         "name": "Compressor"
       },
+      "cooling_enabled": {
+        "name": "Cooling enabled"
+      },
       "crankcase_heater": {
         "name": "Crankcase heater"
       },
@@ -44,6 +47,9 @@
       },
       "fan": {
         "name": "Fan"
+      },
+      "field_wired_control": {
+        "name": "Field-wired control"
       },
       "flow_switch": {
         "name": "Flow switch"
@@ -60,11 +66,17 @@
       "reversing_valve": {
         "name": "Reversing valve"
       },
+      "silence_mode": {
+        "name": "Silence mode"
+      },
       "unit_running": {
         "name": "Running"
       },
       "water_pump": {
         "name": "Water pump"
+      },
+      "weather_compensation": {
+        "name": "Weather compensation"
       }
     },
     "number": {
@@ -88,6 +100,9 @@
       "coil_temp": {
         "name": "Coil temperature"
       },
+      "compensated_heating_target_temp": {
+        "name": "Weather-compensated heating target"
+      },
       "compressor_current": {
         "name": "Compressor current"
       },
@@ -97,8 +112,20 @@
       "compressor_freq_setting": {
         "name": "Compressor target frequency"
       },
+      "compressor_max_freq": {
+        "name": "Compressor maximum frequency"
+      },
+      "compressor_min_freq": {
+        "name": "Compressor minimum frequency"
+      },
       "compressor_runtime": {
         "name": "Compressor running time"
+      },
+      "cooling_restart_difference": {
+        "name": "Cooling restart differential"
+      },
+      "cooling_stop_difference": {
+        "name": "Cooling stop differential"
       },
       "dc_line_voltage": {
         "name": "DC bus voltage"
@@ -112,8 +139,29 @@
       "failure_raw": {
         "name": "Failure register {register}"
       },
+      "heating_restart_ambient_temp": {
+        "name": "Heating restart outdoor temperature"
+      },
+      "heating_restart_difference": {
+        "name": "Heating restart differential"
+      },
+      "heating_stop_difference": {
+        "name": "Heating stop differential"
+      },
       "inlet_temp": {
         "name": "Inlet water temperature"
+      },
+      "limited_target_temp": {
+        "name": "Effective water target"
+      },
+      "low_ambient_compensation_end": {
+        "name": "Low-ambient compensation end"
+      },
+      "low_ambient_compensation_start": {
+        "name": "Low-ambient compensation start"
+      },
+      "low_ambient_heating_target": {
+        "name": "Low-ambient heating target"
       },
       "operating_mode": {
         "name": "Operating mode",
@@ -131,6 +179,23 @@
       "output_relays_raw": {
         "name": "Load outputs"
       },
+      "pump_interval": {
+        "name": "Idle pump interval"
+      },
+      "pump_mode": {
+        "name": "Pump mode",
+        "state": {
+          "economic": "Economic",
+          "interval": "Interval",
+          "normal": "Normal"
+        }
+      },
+      "pump_run_time": {
+        "name": "Idle pump run time"
+      },
+      "shutdown_ambient_temp": {
+        "name": "Shutdown outdoor temperature"
+      },
       "suction_temp": {
         "name": "Suction temperature"
       },
@@ -143,6 +208,12 @@
           "hot_water": "Hot water",
           "sterilize": "Sterilize"
         }
+      },
+      "weather_compensation_offset": {
+        "name": "Weather compensation offset"
+      },
+      "weather_compensation_slope": {
+        "name": "Weather compensation slope"
       }
     },
     "switch": {
