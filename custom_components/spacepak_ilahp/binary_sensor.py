@@ -71,6 +71,19 @@ def _input_sensor(
     )
 
 
+def _setting_sensor(
+    key: str, component: str, value_fn: Callable[[IlahpHeatPump], bool | None]
+) -> SpacePakBinarySensorDescription:
+    """Describe an on/off installer parameter."""
+    return SpacePakBinarySensorDescription(
+        key=key,
+        translation_key=key,
+        component=component,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=value_fn,
+    )
+
+
 BINARY_SENSOR_DESCRIPTIONS: tuple[SpacePakBinarySensorDescription, ...] = (
     SpacePakBinarySensorDescription(
         key="unit_running",
@@ -113,6 +126,18 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[SpacePakBinarySensorDescription, ...] = (
     _input_sensor(
         "flow_switch", lambda d: d.status.flow_switch_closed, diagnostic=True
     ),
+    _setting_sensor(
+        "weather_compensation",
+        "tuning",
+        lambda d: d.tuning.weather_compensation_enabled,
+    ),
+    _setting_sensor(
+        "cooling_enabled", "controls", lambda d: d.controls.cooling_enabled
+    ),
+    _setting_sensor(
+        "field_wired_control", "controls", lambda d: d.controls.field_wired_control
+    ),
+    _setting_sensor("silence_mode", "controls", lambda d: d.controls.silence_mode),
 )
 
 

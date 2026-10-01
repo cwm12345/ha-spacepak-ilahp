@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from enum import IntEnum, IntFlag
 
-__all__ = ["OpenInputs", "OperatingMode", "Outputs", "UnitMode"]
+__all__ = ["OpenInputs", "OperatingMode", "Outputs", "PumpMode", "UnitMode"]
 
 
 class OperatingMode(IntEnum):
@@ -30,6 +30,17 @@ class UnitMode(IntEnum):
     DEFROST = 2
     STERILIZE = 3
     HOT_WATER = 4
+
+
+class PumpMode(IntEnum):
+    """How the water pump runs while the unit is idle (P01, register 1197)."""
+
+    NORMAL = 0
+    """Runs continuously."""
+    ECONOMIC = 1
+    """Runs only around compressor operation."""
+    INTERVAL = 2
+    """Also runs for P03 minutes every P02 minutes while idle."""
 
 
 class OpenInputs(IntFlag):

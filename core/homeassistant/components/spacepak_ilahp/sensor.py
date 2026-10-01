@@ -7,7 +7,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from spacepak_modbus import IlahpHeatPump, OperatingMode, UnitMode
+from spacepak_modbus import IlahpHeatPump, OperatingMode, PumpMode, UnitMode
 
 from homeassistant.components.sensor import (
     RestoreSensor,
@@ -60,8 +60,48 @@ def _temperature(
     )
 
 
-def _enum_name(value: OperatingMode | UnitMode | None) -> str | None:
+def _setting(
+    key: str,
+    value_fn: Callable[[IlahpHeatPump], StateType],
+    *,
+    device_class: SensorDeviceClass | None = SensorDeviceClass.TEMPERATURE,
+    unit: str | None = UnitOfTemperature.CELSIUS,
+) -> SpacePakSensorDescription:
+    """Describe a read-only installer parameter."""
+    return SpacePakSensorDescription(
+        key=key,
+        translation_key=key,
+        component="tuning",
+        device_class=device_class,
+        native_unit_of_measurement=unit,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=value_fn,
+    )
+
+
+def _difference(
+    key: str, value_fn: Callable[[IlahpHeatPump], StateType]
+) -> SpacePakSensorDescription:
+    """Describe a temperature differential.
+
+    Kelvin with no device class, so it is never converted as if it were an
+    absolute temperature.
+    """
+    return _setting(key, value_fn, device_class=None, unit=UnitOfTemperature.KELVIN)
+
+
+def _enum_name(value: OperatingMode | UnitMode | PumpMode | None) -> str | None:
     return None if value is None else value.name.lower()
+
+
+def _compensated_target(device: IlahpHeatPump) -> StateType:
+    """Return the weather-compensated target, only while compensation is on.
+
+    With it off the register reads 0 on some units, which is not a target.
+    """
+    if not device.tuning.weather_compensation_enabled:
+        return None
+    return device.status.compensated_heating_target_temperature
 
 
 # Keys are part of each entity's unique ID; keep them stable.
@@ -164,6 +204,87 @@ SENSOR_DESCRIPTIONS: tuple[SpacePakSensorDescription, ...] = (
         device_class=SensorDeviceClass.ENUM,
         options=[mode.name.lower() for mode in OperatingMode],
         value_fn=lambda d: _enum_name(d.controls.operating_mode),
+    ),
+    SpacePakSensorDescription(
+        key="limited_target_temp",
+        translation_key="limited_target_temp",
+        component="status",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        value_fn=lambda d: d.status.limited_target_temperature,
+    ),
+    SpacePakSensorDescription(
+        key="compensated_heating_target_temp",
+        translation_key="compensated_heating_target_temp",
+        component="status",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        value_fn=_compensated_target,
+    ),
+    _setting("shutdown_ambient_temp", lambda d: d.tuning.shutdown_ambient_temperature),
+    _setting(
+        "heating_restart_ambient_temp",
+        lambda d: d.tuning.heating_restart_ambient_temperature,
+    ),
+    _difference(
+        "heating_restart_difference", lambda d: d.tuning.heating_restart_difference
+    ),
+    _difference("heating_stop_difference", lambda d: d.tuning.heating_stop_difference),
+    _difference(
+        "cooling_restart_difference", lambda d: d.tuning.cooling_restart_difference
+    ),
+    _difference("cooling_stop_difference", lambda d: d.tuning.cooling_stop_difference),
+    _setting(
+        "low_ambient_compensation_start",
+        lambda d: d.tuning.low_ambient_compensation_start,
+    ),
+    _setting(
+        "low_ambient_compensation_end", lambda d: d.tuning.low_ambient_compensation_end
+    ),
+    _setting(
+        "low_ambient_heating_target", lambda d: d.tuning.low_ambient_heating_target
+    ),
+    _setting(
+        "weather_compensation_slope",
+        lambda d: d.tuning.weather_compensation_slope,
+        device_class=None,
+        unit=None,
+    ),
+    _setting(
+        "weather_compensation_offset", lambda d: d.tuning.weather_compensation_offset
+    ),
+    SpacePakSensorDescription(
+        key="pump_mode",
+        translation_key="pump_mode",
+        component="tuning",
+        device_class=SensorDeviceClass.ENUM,
+        options=[mode.name.lower() for mode in PumpMode],
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: _enum_name(d.tuning.pump_mode),
+    ),
+    _setting(
+        "pump_interval",
+        lambda d: d.tuning.pump_interval,
+        device_class=SensorDeviceClass.DURATION,
+        unit=UnitOfTime.MINUTES,
+    ),
+    _setting(
+        "pump_run_time",
+        lambda d: d.tuning.pump_run_time,
+        device_class=SensorDeviceClass.DURATION,
+        unit=UnitOfTime.MINUTES,
+    ),
+    _setting(
+        "compressor_min_freq",
+        lambda d: d.tuning.compressor_min_frequency,
+        device_class=SensorDeviceClass.FREQUENCY,
+        unit=UnitOfFrequency.HERTZ,
+    ),
+    _setting(
+        "compressor_max_freq",
+        lambda d: d.tuning.compressor_max_frequency,
+        device_class=SensorDeviceClass.FREQUENCY,
+        unit=UnitOfFrequency.HERTZ,
     ),
     SpacePakSensorDescription(
         key="compressor_runtime",
