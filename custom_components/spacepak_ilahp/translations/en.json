@@ -39,6 +39,7 @@
       "compressor_freq_running": { "name": "Compressor Frequency Running" },
       "water_flow": { "name": "Water Flow (unit unconfirmed)" },
       "output_relays_raw": { "name": "Output Relays (raw bitmask)" },
+      "switch_states_raw": { "name": "Input States (raw bitmask)" },
       "failure_1_raw": { "name": "Failure 1 (raw bitmask)" },
       "failure_2_raw": { "name": "Failure 2 (raw bitmask)" },
       "failure_3_raw": { "name": "Failure 3 (raw bitmask)" },
@@ -53,7 +54,11 @@
       "unit_running": { "name": "Running" },
       "compressor_on": { "name": "Compressor On" },
       "alarm_output": { "name": "Alarm Output" },
-      "any_fault": { "name": "Any Fault" }
+      "any_fault": { "name": "Any Fault" },
+      "remote_on_off": { "name": "Remote On/Off Input" },
+      "heat_cool_on_off": { "name": "Heat/Cool On/Off Input" },
+      "remote_heat_selected": { "name": "Heat Selected Input" },
+      "flow_switch": { "name": "Flow Switch" }
     },
     "switch": {
       "power": { "name": "Power" }

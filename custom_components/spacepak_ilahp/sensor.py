@@ -53,6 +53,7 @@ async def async_setup_entry(
             CompressorFreqRunningSensor(coordinator, entry),
             WaterFlowSensor(coordinator, entry),
             OutputRelaysRawSensor(coordinator, entry),
+            SwitchStatesRawSensor(coordinator, entry),
             Failure1Sensor(coordinator, entry),
             Failure2Sensor(coordinator, entry),
             Failure3Sensor(coordinator, entry),
@@ -370,6 +371,23 @@ class OutputRelaysRawSensor(_IlahpSensor):
     @property
     def native_value(self) -> int:
         return self.coordinator.data.output_relays_raw
+
+
+class SwitchStatesRawSensor(_IlahpSensor):
+    """Register 2034, the raw S01-S10 field input bitmask (1 = open).
+    The useful bits are decoded into binary_sensors; see device.py."""
+
+    _attr_translation_key = "switch_states_raw"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_state_class = None
+
+    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry)
+        self._attr_unique_id = f"{entry.entry_id}_switch_states_raw"
+
+    @property
+    def native_value(self) -> int:
+        return self.coordinator.data.switch_states_raw
 
 
 class _FailureSensor(_IlahpSensor):

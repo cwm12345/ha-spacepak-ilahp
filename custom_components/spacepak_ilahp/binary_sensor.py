@@ -26,8 +26,37 @@ async def async_setup_entry(
             CompressorOnSensor(coordinator, entry),
             AlarmOutputSensor(coordinator, entry),
             AnyFaultSensor(coordinator, entry),
+            # -- 2026-09-30: field input states (register 2034) --
+            InputSensor(coordinator, entry, "remote_on_off", "remote_on_off_closed"),
+            InputSensor(coordinator, entry, "heat_cool_on_off", "heat_cool_on_off_closed"),
+            InputSensor(coordinator, entry, "remote_heat_selected", "remote_heat_selected"),
+            InputSensor(coordinator, entry, "flow_switch", "flow_switch_closed", diagnostic=True),
         ]
     )
+
+
+class InputSensor(IlahpEntity, BinarySensorEntity):
+    """One field input decoded from register 2034. On = contact closed
+    (for S06: on = heat selected). See device.py for the bit map."""
+
+    def __init__(
+        self,
+        coordinator: IlahpCoordinator,
+        entry: ConfigEntry,
+        key: str,
+        attr: str,
+        diagnostic: bool = False,
+    ) -> None:
+        super().__init__(coordinator, entry)
+        self._attr_translation_key = key
+        self._attr_unique_id = f"{entry.entry_id}_{key}"
+        self._device_attr = attr
+        if diagnostic:
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @property
+    def is_on(self) -> bool:
+        return getattr(self.coordinator.data, self._device_attr)
 
 
 class UnitRunningSensor(IlahpEntity, BinarySensorEntity):

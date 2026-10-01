@@ -89,6 +89,20 @@ REG_COMPRESSOR_FREQ_SETTING = 2071  # T30, scale 1, Hz
 REG_COMPRESSOR_FREQ_RUNNING = 2072  # T31, scale 1, Hz
 REG_WATER_FLOW = 2077  # T39, scale 0.01 (DIGI9 in the manual)
 
+# --- 2026-09-30: field input states (S01-S10), read-only ---
+# Register 2034 per the manual's Modbus table (p.48): bit0 S01 high pressure,
+# bit1 S02 low pressure, bit2 S03 water flow, bit3 S04 heater overheat,
+# bit4 S05 Remote ON/OFF, bit5 S06 Remote heating/cooling, bit6 S07 hot water,
+# bit9 Heating/cooling ON/OFF (shown as S10 on the touchscreen).
+# Polarity per the manual: 0 = on (contact closed), 1 = off (open). Live-checked
+# 2026-09-30: idle in heat reads 0x0014 (S03 and S05 open); a cooling call
+# set bit5 within 1 s and cleared bit4 on both units.
+REG_SWITCH_STATES = 2034
+SW_FLOW = 1 << 2
+SW_REMOTE_ON_OFF = 1 << 4
+SW_REMOTE_HEAT_COOL = 1 << 5
+SW_HEAT_COOL_ON_OFF = 1 << 9
+
 # --- New 2026-09-19 expansion: fault/alarm bitmask registers ---
 # Exposed as raw diagnostic integers, NOT individually bit-decoded (each
 # one packs up to 16 distinct fault conditions -- see the manual's own
@@ -161,6 +175,29 @@ class IlahpHeatPump(Component):
     failure_7_raw = integer(REG_FAILURE_7)
     failure_8_raw = integer(REG_FAILURE_8)
     failure_9_raw = integer(REG_FAILURE_9)
+
+    # -- 2026-09-30: field input states --
+    switch_states_raw = integer(REG_SWITCH_STATES)
+
+    @property
+    def remote_on_off_closed(self) -> bool:
+        """S05 Remote On/Off, the master enable. True = contact closed."""
+        return not self.switch_states_raw & SW_REMOTE_ON_OFF
+
+    @property
+    def heat_cool_on_off_closed(self) -> bool:
+        """Heating/cooling ON/OFF input (S10 on the touchscreen). True = closed."""
+        return not self.switch_states_raw & SW_HEAT_COOL_ON_OFF
+
+    @property
+    def remote_heat_selected(self) -> bool:
+        """S06 Remote heating/cooling: closed = heat, open = cool."""
+        return not self.switch_states_raw & SW_REMOTE_HEAT_COOL
+
+    @property
+    def flow_switch_closed(self) -> bool:
+        """S03 water flow switch. Closes once minimum flow is reached."""
+        return not self.switch_states_raw & SW_FLOW
 
     @property
     def compressor_on(self) -> bool:
