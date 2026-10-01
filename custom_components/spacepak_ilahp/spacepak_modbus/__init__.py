@@ -3,7 +3,7 @@
 
 from .controls import Controls
 from .device import READINGS, SETTINGS, IlahpHeatPump
-from .enums import OperatingMode, Outputs, UnitMode
+from .enums import OpenInputs, OperatingMode, Outputs, UnitMode
 from .faults import FAILURE_ADDRESSES, FAULTS, Fault, Faults
 from .measurements import Measurements
 from .status import Status
@@ -18,6 +18,7 @@ __all__ = [
     "Faults",
     "IlahpHeatPump",
     "Measurements",
+    "OpenInputs",
     "OperatingMode",
     "Outputs",
     "Status",

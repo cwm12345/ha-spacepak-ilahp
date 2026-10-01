@@ -5,13 +5,13 @@ from __future__ import annotations
 
 from modbus_connection.model import Component, boolean, enum, flags, integer
 
-from .enums import Outputs, UnitMode
+from .enums import OpenInputs, Outputs, UnitMode
 
 __all__ = ["Status"]
 
 
 class Status(Component):
-    """Run state, current mode, load outputs and compressor hours."""
+    """Run state, current mode, load outputs, field inputs and compressor hours."""
 
     running = boolean(2011)
     """Unit state: on and running."""
@@ -24,6 +24,33 @@ class Status(Component):
 
     compressor_hours = integer(2032, signed=False, unit="h")
     """Accumulated compressor running time."""
+
+    open_inputs = flags(2034, OpenInputs)
+    """The field switch inputs that are open."""
+
+    def _closed(self, switch: OpenInputs) -> bool | None:
+        open_inputs = self.open_inputs
+        return None if open_inputs is None else switch not in open_inputs
+
+    @property
+    def remote_on_off_closed(self) -> bool | None:
+        """Whether the remote on/off (master enable) input is closed."""
+        return self._closed(OpenInputs.REMOTE_ON_OFF)
+
+    @property
+    def heat_cool_on_off_closed(self) -> bool | None:
+        """Whether the heating/cooling on/off input is closed."""
+        return self._closed(OpenInputs.HEAT_COOL_ON_OFF)
+
+    @property
+    def heat_selected(self) -> bool | None:
+        """Whether the remote heating/cooling input selects heating."""
+        return self._closed(OpenInputs.REMOTE_HEAT_COOL)
+
+    @property
+    def flow_switch_closed(self) -> bool | None:
+        """Whether the water flow switch is closed."""
+        return self._closed(OpenInputs.WATER_FLOW)
 
     @property
     def compressor_on(self) -> bool | None:

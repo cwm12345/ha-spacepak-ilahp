@@ -25,6 +25,7 @@ HOLDING: dict[int, int] = {
     2012: 1,  # heating
     2019: 0x0011,  # compressor + water pump
     2032: 12345,  # compressor hours
+    2034: 0x0000,  # every field input closed: enabled, heating, flow made
     2042: 105,  # compressor current 10.5 A
     2043: 380,  # DC bus 380 V
     2045: 380,  # inlet 38.0 C

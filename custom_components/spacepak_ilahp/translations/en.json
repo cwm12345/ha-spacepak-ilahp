@@ -45,6 +45,18 @@
       "fan": {
         "name": "Fan"
       },
+      "flow_switch": {
+        "name": "Flow switch"
+      },
+      "heat_cool_on_off": {
+        "name": "Heating/cooling on/off input"
+      },
+      "remote_heat_selected": {
+        "name": "Heating selected input"
+      },
+      "remote_on_off": {
+        "name": "Remote on/off input"
+      },
       "reversing_valve": {
         "name": "Reversing valve"
       },
