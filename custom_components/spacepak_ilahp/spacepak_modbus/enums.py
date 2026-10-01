@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from enum import IntEnum, IntFlag
 
-__all__ = ["OperatingMode", "Outputs", "UnitMode"]
+__all__ = ["OpenInputs", "OperatingMode", "Outputs", "UnitMode"]
 
 
 class OperatingMode(IntEnum):
@@ -30,6 +30,31 @@ class UnitMode(IntEnum):
     DEFROST = 2
     STERILIZE = 3
     HOT_WATER = 4
+
+
+class OpenInputs(IntFlag):
+    """The field switch inputs that are open (register 2034, S01-S10).
+
+    A set bit means that input's contact is open; clear means closed. The
+    touchscreen shows the heating/cooling on/off input as S10.
+    """
+
+    HIGH_PRESSURE = 1 << 0
+    """S01 high-pressure switch (closed in normal operation)."""
+    LOW_PRESSURE = 1 << 1
+    """S02 low-pressure switch (closed in normal operation)."""
+    WATER_FLOW = 1 << 2
+    """S03 water flow switch (closes once minimum flow is reached)."""
+    HEATER_OVERHEAT = 1 << 3
+    """S04 electric heater overheat switch."""
+    REMOTE_ON_OFF = 1 << 4
+    """S05 remote on/off, the master enable (must be closed to run)."""
+    REMOTE_HEAT_COOL = 1 << 5
+    """S06 remote heating/cooling select (closed = heat, open = cool)."""
+    HOT_WATER = 1 << 6
+    """S07 hot water enable."""
+    HEAT_COOL_ON_OFF = 1 << 9
+    """Heating/cooling on/off (S10 on the touchscreen)."""
 
 
 class Outputs(IntFlag):

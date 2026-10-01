@@ -16,6 +16,18 @@
       "fan": {
         "default": "mdi:fan"
       },
+      "flow_switch": {
+        "default": "mdi:water-check"
+      },
+      "heat_cool_on_off": {
+        "default": "mdi:electric-switch"
+      },
+      "remote_heat_selected": {
+        "default": "mdi:sun-snowflake-variant"
+      },
+      "remote_on_off": {
+        "default": "mdi:electric-switch"
+      },
       "reversing_valve": {
         "default": "mdi:valve"
       },

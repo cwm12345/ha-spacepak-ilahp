@@ -62,6 +62,10 @@ POWER = "switch.spacepak_ilahp_power"
         ("binary_sensor.spacepak_ilahp_electric_heater_stage_1", STATE_OFF),
         ("binary_sensor.spacepak_ilahp_electric_heater_stage_2", STATE_OFF),
         ("binary_sensor.spacepak_ilahp_crankcase_heater", STATE_OFF),
+        ("binary_sensor.spacepak_ilahp_remote_on_off_input", STATE_ON),
+        ("binary_sensor.spacepak_ilahp_heating_cooling_on_off_input", STATE_ON),
+        ("binary_sensor.spacepak_ilahp_heating_selected_input", STATE_ON),
+        ("binary_sensor.spacepak_ilahp_flow_switch", STATE_ON),
         (POWER, STATE_ON),
         (HEATING_TARGET, "45.0"),
         ("number.spacepak_ilahp_cooling_target_temperature", "7.0"),
@@ -231,3 +235,23 @@ async def test_tank_sensor_with_hot_water_enabled(
     state = hass.states.get("sensor.spacepak_ilahp_hot_water_tank_temperature")
     assert state is not None
     assert state.state == "48.0"
+
+
+async def test_idle_field_inputs(
+    hass: HomeAssistant,
+    mock_connection: MockModbusConnection,
+    init_integration: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Input word 0x14 (seen live, idle) opens remote on/off and the flow switch."""
+    mock_connection.for_unit(1).holding[2034] = 0x0014
+    freezer.tick(timedelta(seconds=31))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    for name, state in (
+        ("remote_on_off_input", STATE_OFF),
+        ("flow_switch", STATE_OFF),
+        ("heating_cooling_on_off_input", STATE_ON),
+        ("heating_selected_input", STATE_ON),
+    ):
+        assert hass.states.get(f"binary_sensor.spacepak_ilahp_{name}").state == state

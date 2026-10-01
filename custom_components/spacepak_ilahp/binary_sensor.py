@@ -55,6 +55,22 @@ def _output_sensor(
     )
 
 
+def _input_sensor(
+    key: str,
+    value_fn: Callable[[IlahpHeatPump], bool | None],
+    *,
+    diagnostic: bool = False,
+) -> SpacePakBinarySensorDescription:
+    """Describe a field switch input; on means the contact is closed."""
+    return SpacePakBinarySensorDescription(
+        key=key,
+        translation_key=key,
+        component="status",
+        entity_category=EntityCategory.DIAGNOSTIC if diagnostic else None,
+        value_fn=value_fn,
+    )
+
+
 BINARY_SENSOR_DESCRIPTIONS: tuple[SpacePakBinarySensorDescription, ...] = (
     SpacePakBinarySensorDescription(
         key="unit_running",
@@ -91,6 +107,12 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[SpacePakBinarySensorDescription, ...] = (
     _output_sensor("electric_heater_1", Outputs.ELECTRIC_HEATER_1),
     _output_sensor("electric_heater_2", Outputs.ELECTRIC_HEATER_2),
     _output_sensor("crankcase_heater", Outputs.CRANKCASE_HEATER),
+    _input_sensor("remote_on_off", lambda d: d.status.remote_on_off_closed),
+    _input_sensor("heat_cool_on_off", lambda d: d.status.heat_cool_on_off_closed),
+    _input_sensor("remote_heat_selected", lambda d: d.status.heat_selected),
+    _input_sensor(
+        "flow_switch", lambda d: d.status.flow_switch_closed, diagnostic=True
+    ),
 )
 
 
