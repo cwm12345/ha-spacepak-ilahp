@@ -1,453 +1,402 @@
+"""Sensors for SpacePak ILAHP heat pumps."""
+
 # Written by Claude, guided by Chris.
-"""Read-only telemetry sensors for the SpacePak ILAHP integration."""
+
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass
+
 from homeassistant.components.sensor import (
+    RestoreSensor,
     SensorDeviceClass,
     SensorEntity,
+    SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
+    EntityCategory,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
     UnitOfFrequency,
     UnitOfTemperature,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import EntityCategory
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.typing import StateType
 
-from .const import DOMAIN
-from .coordinator import IlahpCoordinator
-from .entity import IlahpEntity
+from .coordinator import SpacePakConfigEntry
+from .entity import SpacePakEntity, SpacePakEntityDescription
+from .spacepak_modbus import IlahpHeatPump, OperatingMode, PumpMode, UnitMode
 
-# Register 2012's documented values -- see device.py's REG_UNIT_MODE.
-_UNIT_MODE_TEXT = {0: "cooling", 1: "heating", 2: "defrost", 3: "sterilize", 4: "hot_water"}
+PARALLEL_UPDATES = 0
 
 
-async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
-) -> None:
-    coordinator: IlahpCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities(
-        [
-            OutletTempSensor(coordinator, entry),
-            AmbientTempSensor(coordinator, entry),
-            AcCurrentSensor(coordinator, entry),
-            ModeRawSensor(coordinator, entry),
-            # -- 2026-09-19 expansion --
-            UnitModeSensor(coordinator, entry),
-            InletTempSensor(coordinator, entry),
-            DhwTankTempSensor(coordinator, entry),
-            CoilTempSensor(coordinator, entry),
-            SuctionTempSensor(coordinator, entry),
-            DischargeTempSensor(coordinator, entry),
-            RoomTempSensor(coordinator, entry),
-            CompressorCurrentSensor(coordinator, entry),
-            CompressorRuntimeSensor(coordinator, entry),
-            DcLineVoltageSensor(coordinator, entry),
-            AcInputVoltageSensor(coordinator, entry),
-            CompressorFreqSettingSensor(coordinator, entry),
-            CompressorFreqRunningSensor(coordinator, entry),
-            WaterFlowSensor(coordinator, entry),
-            OutputRelaysRawSensor(coordinator, entry),
-            SwitchStatesRawSensor(coordinator, entry),
-            Failure1Sensor(coordinator, entry),
-            Failure2Sensor(coordinator, entry),
-            Failure3Sensor(coordinator, entry),
-            Failure4Sensor(coordinator, entry),
-            Failure5Sensor(coordinator, entry),
-            Failure6Sensor(coordinator, entry),
-            Failure7Sensor(coordinator, entry),
-            Failure8Sensor(coordinator, entry),
-            Failure9Sensor(coordinator, entry),
-        ]
+@dataclass(frozen=True, kw_only=True)
+class SpacePakSensorDescription(SensorEntityDescription, SpacePakEntityDescription):
+    """Describe a SpacePak sensor."""
+
+    value_fn: Callable[[IlahpHeatPump], StateType]
+    exists_fn: Callable[[IlahpHeatPump], bool] = lambda _: True
+
+
+def _temperature(
+    key: str,
+    value_fn: Callable[[IlahpHeatPump], StateType],
+    *,
+    diagnostic: bool = False,
+) -> SpacePakSensorDescription:
+    return SpacePakSensorDescription(
+        key=key,
+        translation_key=key,
+        component="measurements",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC if diagnostic else None,
+        value_fn=value_fn,
     )
 
 
-class _IlahpSensor(IlahpEntity, SensorEntity):
-    _attr_state_class = SensorStateClass.MEASUREMENT
+def _setting(
+    key: str,
+    value_fn: Callable[[IlahpHeatPump], StateType],
+    *,
+    device_class: SensorDeviceClass | None = SensorDeviceClass.TEMPERATURE,
+    unit: str | None = UnitOfTemperature.CELSIUS,
+) -> SpacePakSensorDescription:
+    """Describe a read-only installer parameter."""
+    return SpacePakSensorDescription(
+        key=key,
+        translation_key=key,
+        component="tuning",
+        device_class=device_class,
+        native_unit_of_measurement=unit,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=value_fn,
+    )
 
 
-class OutletTempSensor(_IlahpSensor):
-    _attr_translation_key = "outlet_temp"
-    _attr_device_class = SensorDeviceClass.TEMPERATURE
-    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
+def _difference(
+    key: str, value_fn: Callable[[IlahpHeatPump], StateType]
+) -> SpacePakSensorDescription:
+    """Describe a temperature differential.
 
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_outlet_temp"
+    Kelvin with no device class, so it is never converted as if it were an
+    absolute temperature.
+    """
+    return _setting(key, value_fn, device_class=None, unit=UnitOfTemperature.KELVIN)
+
+
+def _enum_name(value: OperatingMode | UnitMode | PumpMode | None) -> str | None:
+    return None if value is None else value.name.lower()
+
+
+def _compensated_target(device: IlahpHeatPump) -> StateType:
+    """Return the weather-compensated target, only while compensation is on.
+
+    With it off the register reads 0 on some units, which is not a target.
+    """
+    if not device.tuning.weather_compensation_enabled:
+        return None
+    return device.status.compensated_heating_target_temperature
+
+
+# Keys are part of each entity's unique ID; keep them stable.
+SENSOR_DESCRIPTIONS: tuple[SpacePakSensorDescription, ...] = (
+    _temperature("outlet_temp", lambda d: d.measurements.outlet_temperature),
+    _temperature("inlet_temp", lambda d: d.measurements.inlet_temperature),
+    _temperature("ambient_temp", lambda d: d.measurements.ambient_temperature),
+    SpacePakSensorDescription(
+        key="dhw_tank_temp",
+        translation_key="dhw_tank_temp",
+        component="measurements",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d: d.measurements.hot_water_tank_temperature,
+        # The tank sensor is only wired when the unit's hot water function is on.
+        exists_fn=lambda d: bool(d.controls.hot_water_enabled),
+    ),
+    _temperature(
+        "coil_temp", lambda d: d.measurements.coil_temperature, diagnostic=True
+    ),
+    _temperature(
+        "suction_temp", lambda d: d.measurements.suction_temperature, diagnostic=True
+    ),
+    _temperature(
+        "discharge_temp",
+        lambda d: d.measurements.discharge_temperature,
+        diagnostic=True,
+    ),
+    SpacePakSensorDescription(
+        key="ac_current",
+        translation_key="ac_current",
+        component="measurements",
+        device_class=SensorDeviceClass.CURRENT,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d: d.measurements.ac_input_current,
+    ),
+    SpacePakSensorDescription(
+        key="compressor_current",
+        translation_key="compressor_current",
+        component="measurements",
+        device_class=SensorDeviceClass.CURRENT,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: d.measurements.compressor_current,
+    ),
+    SpacePakSensorDescription(
+        key="ac_input_voltage",
+        translation_key="ac_input_voltage",
+        component="measurements",
+        device_class=SensorDeviceClass.VOLTAGE,
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: d.measurements.ac_input_voltage,
+    ),
+    SpacePakSensorDescription(
+        key="dc_line_voltage",
+        translation_key="dc_line_voltage",
+        component="measurements",
+        device_class=SensorDeviceClass.VOLTAGE,
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: d.measurements.dc_bus_voltage,
+    ),
+    SpacePakSensorDescription(
+        key="compressor_freq_running",
+        translation_key="compressor_freq_running",
+        component="measurements",
+        device_class=SensorDeviceClass.FREQUENCY,
+        native_unit_of_measurement=UnitOfFrequency.HERTZ,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d: d.measurements.compressor_frequency,
+    ),
+    SpacePakSensorDescription(
+        key="compressor_freq_setting",
+        translation_key="compressor_freq_setting",
+        component="measurements",
+        device_class=SensorDeviceClass.FREQUENCY,
+        native_unit_of_measurement=UnitOfFrequency.HERTZ,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: d.measurements.compressor_frequency_target,
+    ),
+    SpacePakSensorDescription(
+        key="unit_mode",
+        translation_key="unit_mode",
+        component="status",
+        device_class=SensorDeviceClass.ENUM,
+        options=[mode.name.lower() for mode in UnitMode],
+        value_fn=lambda d: _enum_name(d.status.unit_mode),
+    ),
+    SpacePakSensorDescription(
+        key="operating_mode",
+        translation_key="operating_mode",
+        component="controls",
+        device_class=SensorDeviceClass.ENUM,
+        options=[mode.name.lower() for mode in OperatingMode],
+        value_fn=lambda d: _enum_name(d.controls.operating_mode),
+    ),
+    SpacePakSensorDescription(
+        key="limited_target_temp",
+        translation_key="limited_target_temp",
+        component="status",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        value_fn=lambda d: d.status.limited_target_temperature,
+    ),
+    SpacePakSensorDescription(
+        key="compensated_heating_target_temp",
+        translation_key="compensated_heating_target_temp",
+        component="status",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        value_fn=_compensated_target,
+    ),
+    _setting("shutdown_ambient_temp", lambda d: d.tuning.shutdown_ambient_temperature),
+    _setting(
+        "heating_restart_ambient_temp",
+        lambda d: d.tuning.heating_restart_ambient_temperature,
+    ),
+    _setting("antifreeze_temp", lambda d: d.tuning.antifreeze_temperature),
+    _difference("antifreeze_difference", lambda d: d.tuning.antifreeze_difference),
+    _setting("antifreeze_min_temp", lambda d: d.tuning.antifreeze_min_temperature),
+    _difference(
+        "outlet_overheat_difference", lambda d: d.tuning.outlet_overheat_difference
+    ),
+    _setting(
+        "pump_freeze_protection_ambient",
+        lambda d: d.tuning.pump_freeze_protection_ambient,
+    ),
+    _setting("max_water_temp", lambda d: d.tuning.max_water_temperature),
+    _setting(
+        "max_water_temp_low_ambient",
+        lambda d: d.tuning.max_water_temperature_low_ambient,
+    ),
+    _setting(
+        "max_water_temp_high_ambient",
+        lambda d: d.tuning.max_water_temperature_high_ambient,
+    ),
+    SpacePakSensorDescription(
+        key="unit_address",
+        translation_key="unit_address",
+        component="controls",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: d.controls.unit_address,
+    ),
+    _difference(
+        "heating_restart_difference", lambda d: d.tuning.heating_restart_difference
+    ),
+    _difference("heating_stop_difference", lambda d: d.tuning.heating_stop_difference),
+    _difference(
+        "cooling_restart_difference", lambda d: d.tuning.cooling_restart_difference
+    ),
+    _difference("cooling_stop_difference", lambda d: d.tuning.cooling_stop_difference),
+    _setting(
+        "low_ambient_compensation_start",
+        lambda d: d.tuning.low_ambient_compensation_start,
+    ),
+    _setting(
+        "low_ambient_compensation_end", lambda d: d.tuning.low_ambient_compensation_end
+    ),
+    _setting(
+        "low_ambient_heating_target", lambda d: d.tuning.low_ambient_heating_target
+    ),
+    _setting(
+        "weather_compensation_slope",
+        lambda d: d.tuning.weather_compensation_slope,
+        device_class=None,
+        unit=None,
+    ),
+    _setting(
+        "weather_compensation_offset", lambda d: d.tuning.weather_compensation_offset
+    ),
+    SpacePakSensorDescription(
+        key="pump_mode",
+        translation_key="pump_mode",
+        component="tuning",
+        device_class=SensorDeviceClass.ENUM,
+        options=[mode.name.lower() for mode in PumpMode],
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: _enum_name(d.tuning.pump_mode),
+    ),
+    _setting(
+        "pump_interval",
+        lambda d: d.tuning.pump_interval,
+        device_class=SensorDeviceClass.DURATION,
+        unit=UnitOfTime.MINUTES,
+    ),
+    _setting(
+        "pump_run_time",
+        lambda d: d.tuning.pump_run_time,
+        device_class=SensorDeviceClass.DURATION,
+        unit=UnitOfTime.MINUTES,
+    ),
+    _setting(
+        "compressor_min_freq",
+        lambda d: d.tuning.compressor_min_frequency,
+        device_class=SensorDeviceClass.FREQUENCY,
+        unit=UnitOfFrequency.HERTZ,
+    ),
+    _setting(
+        "compressor_max_freq",
+        lambda d: d.tuning.compressor_max_frequency,
+        device_class=SensorDeviceClass.FREQUENCY,
+        unit=UnitOfFrequency.HERTZ,
+    ),
+    SpacePakSensorDescription(
+        key="compressor_runtime",
+        translation_key="compressor_runtime",
+        component="status",
+        device_class=SensorDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.HOURS,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: d.status.compressor_hours,
+    ),
+    SpacePakSensorDescription(
+        key="output_relays_raw",
+        translation_key="output_relays_raw",
+        component="status",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda d: None if d.status.outputs is None else int(d.status.outputs),
+    ),
+    *(
+        SpacePakSensorDescription(
+            key=f"failure_{register}_raw",
+            translation_key="failure_raw",
+            translation_placeholders={"register": str(register)},
+            component="faults",
+            entity_category=EntityCategory.DIAGNOSTIC,
+            entity_registry_enabled_default=False,
+            value_fn=lambda d, register=register: d.faults.failure(register),
+        )
+        for register in range(1, 10)
+    ),
+)
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: SpacePakConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
+) -> None:
+    """Set up SpacePak sensors."""
+    async_add_entities(
+        (
+            SpacePakTotalSensor
+            if description.state_class is SensorStateClass.TOTAL_INCREASING
+            else SpacePakSensor
+        )(entry, description)
+        for description in SENSOR_DESCRIPTIONS
+        if description.exists_fn(entry.runtime_data.device)
+    )
+
+
+class SpacePakSensor(SpacePakEntity, SensorEntity):
+    """A heat pump reading."""
+
+    entity_description: SpacePakSensorDescription
 
     @property
-    def native_value(self) -> float:
-        return self.coordinator.data.outlet_temp
+    def native_value(self) -> StateType:
+        """The value from the latest poll."""
+        return self.entity_description.value_fn(self.coordinator.device)
 
 
-class AmbientTempSensor(_IlahpSensor):
-    _attr_translation_key = "ambient_temp"
-    _attr_device_class = SensorDeviceClass.TEMPERATURE
-    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
+class SpacePakTotalSensor(SpacePakEntity, RestoreSensor):
+    """A running total that keeps its last value while the unit is unreachable."""
 
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_ambient_temp"
+    entity_description: SpacePakSensorDescription
 
     @property
-    def native_value(self) -> float:
-        return self.coordinator.data.ambient_temp
-
-
-class AcCurrentSensor(_IlahpSensor):
-    _attr_translation_key = "ac_current"
-    _attr_device_class = SensorDeviceClass.CURRENT
-    _attr_native_unit_of_measurement = UnitOfElectricCurrent.AMPERE
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_ac_current"
-
-    @property
-    def native_value(self) -> float:
-        return self.coordinator.data.ac_current
-
-
-# LoadPercentSensor ("Load %", register 2019) retired 2026-09-19 by
-# Claude, guided by Chris -- see device.py's module docstring. Superseded
-# by OutputRelaysRawSensor below, the same register under its correct
-# identity.
-
-
-class ModeRawSensor(_IlahpSensor):
-    """Diagnostic only -- the mode register's integer-to-mode mapping was
-    never confirmed this session (see device.py). Exposed as a raw number
-    so it's visible/loggable, not hidden, but deliberately not a `select`
-    entity until that mapping is verified -- writing a guessed value to a
-    live unit's mode register is not a place to guess."""
-
-    _attr_translation_key = "mode_raw"
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_state_class = None
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_mode_raw"
-
-    @property
-    def native_value(self) -> int:
-        return self.coordinator.data.mode_raw
-
-
-# -- 2026-09-19 expansion: additional read-only telemetry --
-
-
-class UnitModeSensor(_IlahpSensor):
-    """Register 2012 -- the unit's *actual current* operating mode, read-only
-    status (distinct from register 1012's mode *setting*)."""
-
-    _attr_translation_key = "unit_mode"
-    _attr_device_class = SensorDeviceClass.ENUM
-    _attr_options = list(_UNIT_MODE_TEXT.values())
-    _attr_state_class = None
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_unit_mode"
-
-    @property
-    def native_value(self) -> str | None:
-        return _UNIT_MODE_TEXT.get(self.coordinator.data.unit_mode_raw)
-
-
-class InletTempSensor(_IlahpSensor):
-    _attr_translation_key = "inlet_temp"
-    _attr_device_class = SensorDeviceClass.TEMPERATURE
-    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_inlet_temp"
-
-    @property
-    def native_value(self) -> float:
-        return self.coordinator.data.inlet_temp
-
-
-class DhwTankTempSensor(_IlahpSensor):
-    _attr_translation_key = "dhw_tank_temp"
-    _attr_device_class = SensorDeviceClass.TEMPERATURE
-    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_dhw_tank_temp"
-
-    @property
-    def native_value(self) -> float:
-        return self.coordinator.data.dhw_tank_temp
-
-
-class CoilTempSensor(_IlahpSensor):
-    _attr_translation_key = "coil_temp"
-    _attr_device_class = SensorDeviceClass.TEMPERATURE
-    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_coil_temp"
-
-    @property
-    def native_value(self) -> float:
-        return self.coordinator.data.coil_temp
-
-
-class SuctionTempSensor(_IlahpSensor):
-    _attr_translation_key = "suction_temp"
-    _attr_device_class = SensorDeviceClass.TEMPERATURE
-    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_suction_temp"
-
-    @property
-    def native_value(self) -> float:
-        return self.coordinator.data.suction_temp
-
-
-class DischargeTempSensor(_IlahpSensor):
-    _attr_translation_key = "discharge_temp"
-    _attr_device_class = SensorDeviceClass.TEMPERATURE
-    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_discharge_temp"
-
-    @property
-    def native_value(self) -> float:
-        return self.coordinator.data.discharge_temp
-
-
-class RoomTempSensor(_IlahpSensor):
-    _attr_translation_key = "room_temp"
-    _attr_device_class = SensorDeviceClass.TEMPERATURE
-    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_room_temp"
-
-    @property
-    def native_value(self) -> float:
-        return self.coordinator.data.room_temp
-
-
-class CompressorCurrentSensor(_IlahpSensor):
-    _attr_translation_key = "compressor_current"
-    _attr_device_class = SensorDeviceClass.CURRENT
-    _attr_native_unit_of_measurement = UnitOfElectricCurrent.AMPERE
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_compressor_current"
-
-    @property
-    def native_value(self) -> float:
-        return self.coordinator.data.compressor_current
-
-
-class CompressorRuntimeSensor(_IlahpSensor):
-    _attr_translation_key = "compressor_runtime"
-    _attr_device_class = SensorDeviceClass.DURATION
-    _attr_native_unit_of_measurement = UnitOfTime.HOURS
-    _attr_state_class = SensorStateClass.TOTAL_INCREASING
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_compressor_runtime"
-
-    @property
-    def native_value(self) -> int:
-        return self.coordinator.data.compressor_runtime_hours
-
-
-class DcLineVoltageSensor(_IlahpSensor):
-    _attr_translation_key = "dc_line_voltage"
-    _attr_device_class = SensorDeviceClass.VOLTAGE
-    _attr_native_unit_of_measurement = UnitOfElectricPotential.VOLT
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_dc_line_voltage"
-
-    @property
-    def native_value(self) -> int:
-        return self.coordinator.data.dc_line_voltage
-
-
-class AcInputVoltageSensor(_IlahpSensor):
-    _attr_translation_key = "ac_input_voltage"
-    _attr_device_class = SensorDeviceClass.VOLTAGE
-    _attr_native_unit_of_measurement = UnitOfElectricPotential.VOLT
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_ac_input_voltage"
-
-    @property
-    def native_value(self) -> int:
-        return self.coordinator.data.ac_input_voltage
-
-
-class CompressorFreqSettingSensor(_IlahpSensor):
-    _attr_translation_key = "compressor_freq_setting"
-    _attr_device_class = SensorDeviceClass.FREQUENCY
-    _attr_native_unit_of_measurement = UnitOfFrequency.HERTZ
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_compressor_freq_setting"
-
-    @property
-    def native_value(self) -> int:
-        return self.coordinator.data.compressor_freq_setting
-
-
-class CompressorFreqRunningSensor(_IlahpSensor):
-    _attr_translation_key = "compressor_freq_running"
-    _attr_device_class = SensorDeviceClass.FREQUENCY
-    _attr_native_unit_of_measurement = UnitOfFrequency.HERTZ
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_compressor_freq_running"
-
-    @property
-    def native_value(self) -> int:
-        return self.coordinator.data.compressor_freq_running
-
-
-class WaterFlowSensor(_IlahpSensor):
-    """Register 2077 -- unit unconfirmed (manual just says "DIGI9", no
-    explicit gpm/lpm/m3h label). Left unitless rather than guessing."""
-
-    _attr_translation_key = "water_flow"
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_water_flow"
-
-    @property
-    def native_value(self) -> float:
-        return self.coordinator.data.water_flow
-
-
-class OutputRelaysRawSensor(_IlahpSensor):
-    """Register 2019 -- the same register as the existing (mislabeled, see
-    device.py) `load_pct`, exposed here separately under its correct
-    identity as a raw 16-bit output-relay bitmask. See device.py's
-    `compressor_on`/`alarm_output` for the two bits actually decoded into
-    their own binary_sensors."""
-
-    _attr_translation_key = "output_relays_raw"
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_state_class = None
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_output_relays_raw"
-
-    @property
-    def native_value(self) -> int:
-        return self.coordinator.data.output_relays_raw
-
-
-class SwitchStatesRawSensor(_IlahpSensor):
-    """Register 2034, the raw S01-S10 field input bitmask (1 = open).
-    The useful bits are decoded into binary_sensors; see device.py."""
-
-    _attr_translation_key = "switch_states_raw"
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_state_class = None
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_switch_states_raw"
-
-    @property
-    def native_value(self) -> int:
-        return self.coordinator.data.switch_states_raw
-
-
-class _FailureSensor(_IlahpSensor):
-    """Base for the 9 raw Failure-register diagnostics -- see device.py's
-    module docstring for why these aren't bit-decoded individually."""
-
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_state_class = None
-
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry, n: int) -> None:
-        super().__init__(coordinator, entry)
-        self._n = n
-        self._attr_translation_key = f"failure_{n}_raw"
-        self._attr_unique_id = f"{entry.entry_id}_failure_{n}_raw"
-
-    @property
-    def native_value(self) -> int:
-        return getattr(self.coordinator.data, f"failure_{self._n}_raw")
-
-
-class Failure1Sensor(_FailureSensor):
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry, 1)
-
-
-class Failure2Sensor(_FailureSensor):
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry, 2)
-
-
-class Failure3Sensor(_FailureSensor):
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry, 3)
-
-
-class Failure4Sensor(_FailureSensor):
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry, 4)
-
-
-class Failure5Sensor(_FailureSensor):
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry, 5)
-
-
-class Failure6Sensor(_FailureSensor):
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry, 6)
-
-
-class Failure7Sensor(_FailureSensor):
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry, 7)
-
-
-class Failure8Sensor(_FailureSensor):
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry, 8)
-
-
-class Failure9Sensor(_FailureSensor):
-    def __init__(self, coordinator: IlahpCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry, 9)
+    def available(self) -> bool:
+        """Always available, so long-term statistics keep their history."""
+        return True
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the last value, then take the current one if there is one."""
+        await super().async_added_to_hass()
+        if (last := await self.async_get_last_sensor_data()) is not None:
+            self._attr_native_value = last.native_value
+        self._process_data()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._process_data()
+        super()._handle_coordinator_update()
+
+    def _process_data(self) -> None:
+        if self.entity_description.component in self.coordinator.data.failed:
+            return
+        value = self.entity_description.value_fn(self.coordinator.device)
+        if value is not None:
+            self._attr_native_value = value
