@@ -139,6 +139,10 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[SpacePakBinarySensorDescription, ...] = (
         "field_wired_control", "controls", lambda d: d.controls.field_wired_control
     ),
     _setting_sensor("silence_mode", "controls", lambda d: d.controls.silence_mode),
+    _setting_sensor("auto_restart", "controls", lambda d: d.controls.auto_restart),
+    _setting_sensor(
+        "display_fahrenheit", "controls", lambda d: d.controls.display_fahrenheit
+    ),
 )
 
 

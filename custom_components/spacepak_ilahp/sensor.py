@@ -225,6 +225,32 @@ SENSOR_DESCRIPTIONS: tuple[SpacePakSensorDescription, ...] = (
         "heating_restart_ambient_temp",
         lambda d: d.tuning.heating_restart_ambient_temperature,
     ),
+    _setting("antifreeze_temp", lambda d: d.tuning.antifreeze_temperature),
+    _difference("antifreeze_difference", lambda d: d.tuning.antifreeze_difference),
+    _setting("antifreeze_min_temp", lambda d: d.tuning.antifreeze_min_temperature),
+    _difference(
+        "outlet_overheat_difference", lambda d: d.tuning.outlet_overheat_difference
+    ),
+    _setting(
+        "pump_freeze_protection_ambient",
+        lambda d: d.tuning.pump_freeze_protection_ambient,
+    ),
+    _setting("max_water_temp", lambda d: d.tuning.max_water_temperature),
+    _setting(
+        "max_water_temp_low_ambient",
+        lambda d: d.tuning.max_water_temperature_low_ambient,
+    ),
+    _setting(
+        "max_water_temp_high_ambient",
+        lambda d: d.tuning.max_water_temperature_high_ambient,
+    ),
+    SpacePakSensorDescription(
+        key="unit_address",
+        translation_key="unit_address",
+        component="controls",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: d.controls.unit_address,
+    ),
     _difference(
         "heating_restart_difference", lambda d: d.tuning.heating_restart_difference
     ),

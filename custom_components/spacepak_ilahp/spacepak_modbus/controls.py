@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from modbus_connection.model import Component, boolean, enum, gauge
+from modbus_connection.model import Component, boolean, enum, gauge, integer
 
 from .enums import OperatingMode
 
@@ -41,6 +41,11 @@ class Controls(Component):
     operating_mode = enum(1012, OperatingMode)
     """The mode the unit is set to run in. Read-only here."""
 
+    auto_restart = boolean(1018)
+    """H01, whether the unit resumes its last state after a power loss. The
+    manual's register table words this as "disable automatic restart", but the
+    value matches the touchscreen's H01 Auto Start (1 = yes, the default)."""
+
     cooling_enabled = boolean(1021)
     """H05, whether the installer enabled cooling. It decides which values
     ``operating_mode`` can take."""
@@ -51,9 +56,15 @@ class Controls(Component):
     ``power_on`` write alone does not start the unit; the remote on/off input
     decides."""
 
+    unit_address = integer(1024, signed=False)
+    """H10, the unit's Modbus address."""
+
     hot_water_enabled = boolean(1028)
     """H28, whether the unit's own hot water (DHW) function is enabled. When
     it is not, the hot water tank temperature has no sensor behind it."""
+
+    display_fahrenheit = boolean(1029)
+    """H21, whether the touchscreen shows °F. Registers stay in °C either way."""
 
     silence_mode = boolean(1030)
     """H22, whisper mode."""
