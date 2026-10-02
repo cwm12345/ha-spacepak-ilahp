@@ -30,6 +30,9 @@
       "any_fault": {
         "name": "Fault"
       },
+      "auto_restart": {
+        "name": "Auto restart"
+      },
       "compressor_on": {
         "name": "Compressor"
       },
@@ -38,6 +41,9 @@
       },
       "crankcase_heater": {
         "name": "Crankcase heater"
+      },
+      "display_fahrenheit": {
+        "name": "Display in Fahrenheit"
       },
       "electric_heater_1": {
         "name": "Electric heater stage 1"
@@ -96,6 +102,15 @@
       },
       "ambient_temp": {
         "name": "Outdoor temperature"
+      },
+      "antifreeze_difference": {
+        "name": "Antifreeze differential"
+      },
+      "antifreeze_min_temp": {
+        "name": "Antifreeze minimum temperature"
+      },
+      "antifreeze_temp": {
+        "name": "Antifreeze temperature"
       },
       "coil_temp": {
         "name": "Coil temperature"
@@ -163,6 +178,15 @@
       "low_ambient_heating_target": {
         "name": "Low-ambient heating target"
       },
+      "max_water_temp": {
+        "name": "Maximum water temperature"
+      },
+      "max_water_temp_high_ambient": {
+        "name": "Maximum water temperature, warm outdoors"
+      },
+      "max_water_temp_low_ambient": {
+        "name": "Maximum water temperature, cold outdoors"
+      },
       "operating_mode": {
         "name": "Operating mode",
         "state": {
@@ -173,11 +197,17 @@
           "hot_water_and_heating": "Hot water and heating"
         }
       },
+      "outlet_overheat_difference": {
+        "name": "Outlet overheat differential"
+      },
       "outlet_temp": {
         "name": "Outlet water temperature"
       },
       "output_relays_raw": {
         "name": "Load outputs"
+      },
+      "pump_freeze_protection_ambient": {
+        "name": "Freeze protection pump outdoor temperature"
       },
       "pump_interval": {
         "name": "Idle pump interval"
@@ -198,6 +228,9 @@
       },
       "suction_temp": {
         "name": "Suction temperature"
+      },
+      "unit_address": {
+        "name": "Modbus address"
       },
       "unit_mode": {
         "name": "Current mode",

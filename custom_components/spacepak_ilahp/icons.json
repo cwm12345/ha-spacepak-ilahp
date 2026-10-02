@@ -1,6 +1,9 @@
 {
   "entity": {
     "binary_sensor": {
+      "auto_restart": {
+        "default": "mdi:restart"
+      },
       "compressor_on": {
         "default": "mdi:heat-pump"
       },
@@ -9,6 +12,9 @@
       },
       "crankcase_heater": {
         "default": "mdi:heating-coil"
+      },
+      "display_fahrenheit": {
+        "default": "mdi:temperature-fahrenheit"
       },
       "electric_heater_1": {
         "default": "mdi:heating-coil"
@@ -65,6 +71,9 @@
       },
       "pump_mode": {
         "default": "mdi:pump"
+      },
+      "unit_address": {
+        "default": "mdi:identifier"
       },
       "unit_mode": {
         "default": "mdi:heat-pump"
