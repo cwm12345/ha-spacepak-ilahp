@@ -54,6 +54,7 @@ def _temperature(
         component="measurements",
         device_class=SensorDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        suggested_display_precision=1,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC if diagnostic else None,
         value_fn=value_fn,
@@ -74,6 +75,9 @@ def _setting(
         component="tuning",
         device_class=device_class,
         native_unit_of_measurement=unit,
+        suggested_display_precision=(
+            1 if unit in (UnitOfTemperature.CELSIUS, UnitOfTemperature.KELVIN) else None
+        ),
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=value_fn,
     )
@@ -115,6 +119,7 @@ SENSOR_DESCRIPTIONS: tuple[SpacePakSensorDescription, ...] = (
         component="measurements",
         device_class=SensorDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        suggested_display_precision=1,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d: d.measurements.hot_water_tank_temperature,
         # The tank sensor is only wired when the unit's hot water function is on.
@@ -211,6 +216,7 @@ SENSOR_DESCRIPTIONS: tuple[SpacePakSensorDescription, ...] = (
         component="status",
         device_class=SensorDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        suggested_display_precision=1,
         value_fn=lambda d: d.status.limited_target_temperature,
     ),
     SpacePakSensorDescription(
@@ -219,6 +225,7 @@ SENSOR_DESCRIPTIONS: tuple[SpacePakSensorDescription, ...] = (
         component="status",
         device_class=SensorDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        suggested_display_precision=1,
         value_fn=_compensated_target,
     ),
     _setting("shutdown_ambient_temp", lambda d: d.tuning.shutdown_ambient_temperature),

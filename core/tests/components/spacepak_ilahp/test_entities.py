@@ -313,3 +313,18 @@ async def test_compensated_target_with_weather_compensation_on(
         ).state
         == "43.0"
     )
+
+
+async def test_temperatures_display_one_decimal(
+    hass: HomeAssistant,
+    init_integration: MockConfigEntry,
+    entity_registry: er.EntityRegistry,
+) -> None:
+    """Temperatures show one decimal, so a converted 43.3 C reads 109.9 F."""
+    for entity_id in (
+        "sensor.spacepak_ilahp_outlet_water_temperature",
+        "sensor.spacepak_ilahp_maximum_water_temperature_cold_outdoors",
+        "sensor.spacepak_ilahp_heating_restart_differential",
+    ):
+        entry = entity_registry.async_get(entity_id)
+        assert entry.options["sensor"]["suggested_display_precision"] == 1
