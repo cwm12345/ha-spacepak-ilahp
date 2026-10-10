@@ -1,0 +1,91 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "auto_restart": {
+        "default": "mdi:restart"
+      },
+      "compressor_on": {
+        "default": "mdi:heat-pump"
+      },
+      "cooling_enabled": {
+        "default": "mdi:snowflake"
+      },
+      "crankcase_heater": {
+        "default": "mdi:heating-coil"
+      },
+      "display_fahrenheit": {
+        "default": "mdi:temperature-fahrenheit"
+      },
+      "electric_heater_1": {
+        "default": "mdi:heating-coil"
+      },
+      "electric_heater_2": {
+        "default": "mdi:heating-coil"
+      },
+      "fan": {
+        "default": "mdi:fan"
+      },
+      "field_wired_control": {
+        "default": "mdi:electric-switch"
+      },
+      "flow_switch": {
+        "default": "mdi:water-check"
+      },
+      "heat_cool_on_off": {
+        "default": "mdi:electric-switch"
+      },
+      "remote_heat_selected": {
+        "default": "mdi:sun-snowflake-variant"
+      },
+      "remote_on_off": {
+        "default": "mdi:electric-switch"
+      },
+      "reversing_valve": {
+        "default": "mdi:valve"
+      },
+      "silence_mode": {
+        "default": "mdi:volume-off"
+      },
+      "water_pump": {
+        "default": "mdi:pump"
+      },
+      "weather_compensation": {
+        "default": "mdi:sun-thermometer-outline"
+      }
+    },
+    "sensor": {
+      "compressor_freq_running": {
+        "default": "mdi:sine-wave"
+      },
+      "compressor_freq_setting": {
+        "default": "mdi:sine-wave"
+      },
+      "failure_raw": {
+        "default": "mdi:alert-circle-outline"
+      },
+      "operating_mode": {
+        "default": "mdi:heat-pump-outline"
+      },
+      "output_relays_raw": {
+        "default": "mdi:electric-switch"
+      },
+      "pump_mode": {
+        "default": "mdi:pump"
+      },
+      "unit_address": {
+        "default": "mdi:identifier"
+      },
+      "unit_mode": {
+        "default": "mdi:heat-pump"
+      },
+      "weather_compensation_slope": {
+        "default": "mdi:chart-line-variant"
+      }
+    },
+    "switch": {
+      "power": {
+        "default": "mdi:power"
+      }
+    }
+  }
+}

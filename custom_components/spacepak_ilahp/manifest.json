@@ -1,10 +1,17 @@
 {
   "domain": "spacepak_ilahp",
-  "name": "SpacePak Solstice ILAHP",
-  "version": "0.1.0",
-  "config_flow": true,
-  "documentation": "",
-  "requirements": ["modbus-connection[pymodbus]>=4.12.1"],
+  "name": "SpacePak ILAHP",
   "codeowners": [],
-  "iot_class": "local_polling"
+  "config_flow": true,
+  "dependencies": [
+    "modbus"
+  ],
+  "documentation": "https://github.com/cwm12345/ha-spacepak-ilahp",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/cwm12345/ha-spacepak-ilahp/issues",
+  "requirements": [
+    "modbus-connection[tmodbus]>=4.12.1"
+  ],
+  "version": "0.2.0"
 }
