@@ -91,6 +91,12 @@
       },
       "heating_target_temp": {
         "name": "Heating target temperature"
+      },
+      "heating_restart_difference": {
+        "name": "Heating restart differential"
+      },
+      "heating_stop_difference": {
+        "name": "Heating stop differential"
       }
     },
     "sensor": {

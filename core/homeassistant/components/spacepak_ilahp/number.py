@@ -1,4 +1,4 @@
-"""Water setpoints for SpacePak ILAHP heat pumps."""
+"""Water setpoints and heating differentials for SpacePak ILAHP heat pumps."""
 
 # Written by Claude, guided by Chris.
 
@@ -16,7 +16,7 @@ from homeassistant.components.number import (
     NumberEntityDescription,
     NumberMode,
 )
-from homeassistant.const import UnitOfTemperature
+from homeassistant.const import EntityCategory, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
@@ -39,7 +39,7 @@ class SpacePakNumberDescription(NumberEntityDescription, SpacePakEntityDescripti
     """Describe a SpacePak setpoint."""
 
     field: str
-    """The Controls field this number writes."""
+    """The field of ``component`` this number writes."""
     value_fn: Callable[[IlahpHeatPump], float | None]
     min_fn: Callable[[IlahpHeatPump], float | None]
     max_fn: Callable[[IlahpHeatPump], float | None]
@@ -78,6 +78,39 @@ NUMBER_DESCRIPTIONS: tuple[SpacePakNumberDescription, ...] = (
         default_min=DEFAULT_MIN_COOLING_SETPOINT,
         default_max=DEFAULT_MAX_COOLING_SETPOINT,
     ),
+    # R04/R05 in kelvin with no device class, so a differential is never
+    # converted as if it were an absolute temperature. 0-10 K is the
+    # manual's 0-18 °F.
+    SpacePakNumberDescription(
+        key="heating_restart_difference_setting",
+        translation_key="heating_restart_difference",
+        component="tuning",
+        native_unit_of_measurement=UnitOfTemperature.KELVIN,
+        native_step=0.5,
+        mode=NumberMode.BOX,
+        entity_category=EntityCategory.CONFIG,
+        field="heating_restart_difference",
+        value_fn=lambda d: d.tuning.heating_restart_difference,
+        min_fn=lambda _: None,
+        max_fn=lambda _: None,
+        default_min=0.0,
+        default_max=10.0,
+    ),
+    SpacePakNumberDescription(
+        key="heating_stop_difference_setting",
+        translation_key="heating_stop_difference",
+        component="tuning",
+        native_unit_of_measurement=UnitOfTemperature.KELVIN,
+        native_step=0.5,
+        mode=NumberMode.BOX,
+        entity_category=EntityCategory.CONFIG,
+        field="heating_stop_difference",
+        value_fn=lambda d: d.tuning.heating_stop_difference,
+        min_fn=lambda _: None,
+        max_fn=lambda _: None,
+        default_min=0.0,
+        default_max=10.0,
+    ),
 )
 
 
@@ -93,7 +126,7 @@ async def async_setup_entry(
 
 
 class SpacePakNumber(SpacePakEntity, NumberEntity):
-    """A water setpoint, bounded by the unit's own configured limits."""
+    """A writable setting, bounded by the unit's own limits where it has them."""
 
     entity_description: SpacePakNumberDescription
 
@@ -115,11 +148,10 @@ class SpacePakNumber(SpacePakEntity, NumberEntity):
         return self.entity_description.default_max if value is None else value
 
     async def async_set_native_value(self, value: float) -> None:
-        """Write a new setpoint and read it back."""
+        """Write a new value and read it back."""
+        component = getattr(self.coordinator.device, self.entity_description.component)
         try:
-            await self.coordinator.device.controls.write(
-                self.entity_description.field, value
-            )
+            await component.write(self.entity_description.field, value)
         except (ModbusError, ValueError) as err:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
