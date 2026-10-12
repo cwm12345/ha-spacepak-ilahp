@@ -202,6 +202,24 @@ async def test_set_heating_restart_difference(
     assert mock_connection.for_unit(1).holding[1160] == 50
 
 
+async def test_set_pump_interval(
+    hass: HomeAssistant,
+    init_integration: MockConfigEntry,
+    mock_connection: MockModbusConnection,
+) -> None:
+    """P02 is writable in whole minutes, 1-120."""
+    entity_id = "number.spacepak_ilahp_idle_pump_interval"
+    assert hass.states.get(entity_id).state == "30"
+    await hass.services.async_call(
+        NUMBER_DOMAIN,
+        SERVICE_SET_VALUE,
+        {ATTR_ENTITY_ID: entity_id, ATTR_VALUE: 60},
+        blocking=True,
+    )
+    assert mock_connection.for_unit(1).holding[1198] == 60
+    assert hass.states.get(entity_id).state == "60"
+
+
 async def test_power_switch(
     hass: HomeAssistant,
     init_integration: MockConfigEntry,
