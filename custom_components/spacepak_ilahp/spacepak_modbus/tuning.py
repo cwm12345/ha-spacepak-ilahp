@@ -23,10 +23,22 @@ def _difference_within(high: float) -> Callable[[float], float]:
     return validate
 
 
+def _whole_minutes(low: int, high: int) -> Callable[[float], int]:
+    """A write validator for a whole number of minutes in low..high."""
+
+    def validate(value: float) -> int:
+        if value != int(value) or not low <= value <= high:
+            raise ValueError(f"{value} is not a whole number in {low}..{high}")
+        return int(value)
+
+    return validate
+
+
 class Tuning(Component):
     """Installer parameters that shape how the unit cycles and what water it makes.
 
-    Read-only here, except the two heating differentials (R04 and R05). These
+    Read-only here, except the two heating differentials (R04 and R05) and
+    the pump interval (P02). These
     are the installer's settings, and a wrong value can short-cycle the
     compressor or leave the house short of heat, so change the rest at the
     unit. Absolute temperatures are signed tenths of a degree
@@ -96,8 +108,13 @@ class Tuning(Component):
     pump_mode = enum(1197, PumpMode)
     """P01, how the water pump runs while the unit is idle."""
 
-    pump_interval = integer(1198, signed=False, unit="min")
-    """P02, minutes between idle pump runs in ``PumpMode.INTERVAL``."""
+    pump_interval = integer(
+        1198, signed=False, unit="min", writable=_whole_minutes(1, 120)
+    )
+    """P02, minutes between idle pump runs. The manual ties it to
+    ``PumpMode.INTERVAL``, but a unit in ``PumpMode.ECONOMIC`` held on by its
+    remote input was seen waking the pump about every P02 minutes and
+    restarting the compressor on what it sampled. Writable, 1-120."""
 
     pump_run_time = integer(1199, signed=False, unit="min")
     """P03, minutes per idle pump run in ``PumpMode.INTERVAL``."""

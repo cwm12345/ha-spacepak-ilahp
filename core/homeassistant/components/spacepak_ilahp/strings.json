@@ -97,6 +97,9 @@
       },
       "heating_stop_difference": {
         "name": "Heating stop differential"
+      },
+      "pump_interval": {
+        "name": "Idle pump interval"
       }
     },
     "sensor": {

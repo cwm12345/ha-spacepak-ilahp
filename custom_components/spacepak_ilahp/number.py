@@ -15,7 +15,7 @@ from homeassistant.components.number import (
     NumberEntityDescription,
     NumberMode,
 )
-from homeassistant.const import EntityCategory, UnitOfTemperature
+from homeassistant.const import EntityCategory, UnitOfTemperature, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
@@ -110,6 +110,24 @@ NUMBER_DESCRIPTIONS: tuple[SpacePakNumberDescription, ...] = (
         max_fn=lambda _: None,
         default_min=0.0,
         default_max=10.0,
+    ),
+    # P02. In economic pump mode the unit still wakes its pump about every
+    # P02 minutes while held on, and restarts on what it samples.
+    SpacePakNumberDescription(
+        key="pump_interval_setting",
+        translation_key="pump_interval",
+        component="tuning",
+        device_class=NumberDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        native_step=1,
+        mode=NumberMode.BOX,
+        entity_category=EntityCategory.CONFIG,
+        field="pump_interval",
+        value_fn=lambda d: d.tuning.pump_interval,
+        min_fn=lambda _: None,
+        max_fn=lambda _: None,
+        default_min=1,
+        default_max=120,
     ),
 )
 
