@@ -42,11 +42,21 @@ the starting point for that.
 
 ## Installation
 
-**HACS:** add this repository as a custom repository (category: Integration),
-install **SpacePak ILAHP**, and restart Home Assistant.
+**With HACS** (recommended, so you're told about updates):
 
-**Manually:** copy `custom_components/spacepak_ilahp` into your
-`config/custom_components/` folder and restart.
+1. In Home Assistant, open **HACS**, then the **⋮** menu (top right) →
+   **Custom repositories**.
+2. Repository: `https://github.com/cwm12345/ha-spacepak-ilahp`, type:
+   **Integration**. Click **Add**.
+3. Search HACS for **SpacePak ILAHP**, open it and click **Download**.
+4. Restart Home Assistant.
+
+**Manually:** copy the `custom_components/spacepak_ilahp` folder from this
+repository into your Home Assistant `config/custom_components/` folder (create
+`custom_components` if it doesn't exist), then restart Home Assistant.
+
+You don't need to install the `spacepak-modbus` library separately; a copy is
+included in `custom_components/spacepak_ilahp`.
 
 Then go to **Settings → Devices & services → Add integration → SpacePak
 ILAHP** and enter:
