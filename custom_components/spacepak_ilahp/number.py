@@ -78,6 +78,25 @@ NUMBER_DESCRIPTIONS: tuple[SpacePakNumberDescription, ...] = (
         default_min=DEFAULT_MIN_COOLING_SETPOINT,
         default_max=DEFAULT_MAX_COOLING_SETPOINT,
     ),
+    # R10, the unit's floor for the heating target. Lowering it lets a
+    # backup-only heat pump hold a low standby target. Kept at or above
+    # 10 °C (50 °F) here; the unit's own R11 caps it.
+    SpacePakNumberDescription(
+        key="min_heating_setpoint_setting",
+        translation_key="min_heating_setpoint",
+        component="controls",
+        device_class=NumberDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        native_step=0.5,
+        mode=NumberMode.BOX,
+        entity_category=EntityCategory.CONFIG,
+        field="min_heating_setpoint",
+        value_fn=lambda d: d.controls.min_heating_setpoint,
+        min_fn=lambda _: None,
+        max_fn=lambda d: d.controls.max_heating_setpoint,
+        default_min=10.0,
+        default_max=DEFAULT_MAX_HEATING_SETPOINT,
+    ),
     # R04/R05 in kelvin with no device class, so a differential is never
     # converted as if it were an absolute temperature. 0-10 K is the
     # manual's 0-18 °F.

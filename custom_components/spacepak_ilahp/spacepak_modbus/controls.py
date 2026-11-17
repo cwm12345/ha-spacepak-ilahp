@@ -85,8 +85,10 @@ class Controls(Component):
     max_cooling_setpoint = gauge(1163, 0.1, unit="°C")
     """R09, the highest cooling target the unit accepts."""
 
-    min_heating_setpoint = gauge(1164, 0.1, unit="°C")
-    """R10, the lowest heating target the unit accepts."""
+    min_heating_setpoint = gauge(1164, 0.1, unit="°C", writable=_within(-30.0, 99.0))
+    """R10, the lowest heating target the unit accepts. Writable, so a low
+    standby target (for example when another heat source carries the load and
+    the heat pump is only backup) can go below the installer's floor."""
 
     max_heating_setpoint = gauge(1165, 0.1, unit="°C")
     """R11, the highest heating target the unit accepts."""
