@@ -220,6 +220,24 @@ async def test_set_pump_interval(
     assert hass.states.get(entity_id).state == "60"
 
 
+async def test_set_min_heating_setpoint(
+    hass: HomeAssistant,
+    init_integration: MockConfigEntry,
+    mock_connection: MockModbusConnection,
+) -> None:
+    """R10 is writable, and the heating target may then go below the old floor."""
+    entity_id = "number.spacepak_ilahp_minimum_heating_setpoint"
+    assert hass.states.get(entity_id) is not None
+    await hass.services.async_call(
+        NUMBER_DOMAIN,
+        SERVICE_SET_VALUE,
+        {ATTR_ENTITY_ID: entity_id, ATTR_VALUE: 15.5},
+        blocking=True,
+    )
+    assert mock_connection.for_unit(1).holding[1164] == 155
+    assert hass.states.get(entity_id).state == "15.5"
+
+
 async def test_power_switch(
     hass: HomeAssistant,
     init_integration: MockConfigEntry,

@@ -98,6 +98,9 @@
       "heating_stop_difference": {
         "name": "Heating stop differential"
       },
+      "min_heating_setpoint": {
+        "name": "Minimum heating setpoint"
+      },
       "pump_interval": {
         "name": "Idle pump interval"
       }
